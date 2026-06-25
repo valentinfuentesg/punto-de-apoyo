@@ -32,11 +32,20 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><clipPath id='p'><path d='M32 3 C18 3 8 13 8 27 C8 43 32 61 32 61 C32 61 56 43 56 27 C56 13 46 3 32 3 Z'/></clipPath></defs><g clip-path='url(%23p)'><rect width='64' height='21' y='0' fill='%23FCDC23'/><rect width='64' height='22' y='21' fill='%230033A0'/><rect width='64' height='21' y='43' fill='%23CE1126'/></g><path d='M32 3 C18 3 8 13 8 27 C8 43 32 61 32 61 C32 61 56 43 56 27 C56 13 46 3 32 3 Z' fill='none' stroke='%23000' stroke-width='2.5'/><circle cx='32' cy='26' r='6.5' fill='%23fff' stroke='%23000' stroke-width='1.5'/></svg>" />
   <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><clipPath id='p'><path d='M32 3 C18 3 8 13 8 27 C8 43 32 61 32 61 C32 61 56 43 56 27 C56 13 46 3 32 3 Z'/></clipPath></defs><g clip-path='url(%23p)'><rect width='64' height='21' y='0' fill='%23FCDC23'/><rect width='64' height='22' y='21' fill='%230033A0'/><rect width='64' height='21' y='43' fill='%23CE1126'/></g></svg>" />
 
-  <!-- Leaflet (jsdelivr es más confiable que unpkg en LATAM) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
-          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+  <!-- Hints de performance: abre conexiones TLS antes de necesitarlas -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin />
+  <link rel="preconnect" href="https://b.basemaps.cartocdn.com" crossorigin />
+  <link rel="dns-prefetch" href="https://nominatim.openstreetmap.org" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+
+  <!-- Leaflet MarkerCluster: agrupa pines cercanos + acelera el render -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="anonymous" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin="anonymous"></script>
 
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
@@ -696,6 +705,21 @@
     // Bloqueo defensivo: si por alguna razón el centro queda fuera, lo regresamos
     map.on("drag", () => map.panInsideBounds(VE_BOUNDS, { animate: false }));
 
+    // ============================================================
+    // CLUSTER GROUP — agrupa pines cercanos y acelera Leaflet
+    // ============================================================
+    const clusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 55,            // px — pines a <55px del cluster se agrupan
+      showCoverageOnHover: false,
+      spiderfyOnMaxZoom: true,         // al hacer click en cluster denso, abre en abanico
+      disableClusteringAtZoom: 17,     // zoom calle: ya no agrupar
+      chunkedLoading: true,            // procesa en chunks (no congela el hilo)
+      chunkInterval: 100,
+      chunkDelay: 30,
+      animateAddingMarkers: false,
+    });
+    map.addLayer(clusterGroup);
+
     // CartoDB Voyager — modo claro, calles coloreadas, labels legibles.
     // Fallback automático a OSM normal si Carto falla.
     const cartoLayer = L.tileLayer(
@@ -812,6 +836,14 @@
       return { txt: "Ofrece / Tiene", cls: "offer" };
     }
 
+    function gmapsLink(lat, lng, label = "🧭 Cómo llegar") {
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer"
+        style="display:inline-block;background:#1d4ed8;color:#fff;padding:6px 12px;
+               border-radius:6px;margin-top:6px;font-weight:600;
+               text-decoration:none;font-size:12px;">${label}</a>`;
+    }
+
     function addReportToMap(r) {
       const cat = CATEGORIES[r.category] || { emoji: "📍", label: r.category };
       const type = r.report_type || "offer";
@@ -821,11 +853,12 @@
         .bindPopup(
           `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
           `<b>${cat.emoji} ${cat.label}</b>${note}<br>` +
-          `<small>${timeAgo(r.created_at)}</small>`
+          `<small>${timeAgo(r.created_at)}</small><br>` +
+          gmapsLink(r.lat, r.lng)
         );
       const entry = { layer, category: r.category, report_type: type, created_at: r.created_at };
       markers.push(entry);
-      if (matchesFilter(entry, activeFilter)) layer.addTo(map);
+      if (matchesFilter(entry, activeFilter)) clusterGroup.addLayer(layer);
     }
 
     function escapeHtml(s) {
@@ -846,11 +879,16 @@
       document.querySelectorAll(".chip").forEach(c =>
         c.classList.toggle("active", c.dataset.filter === f)
       );
+      const toAdd = [];
+      const toRemove = [];
       markers.forEach(m => {
         const should = matchesFilter(m, f);
-        if (should && !map.hasLayer(m.layer)) m.layer.addTo(map);
-        if (!should && map.hasLayer(m.layer)) map.removeLayer(m.layer);
+        const hasIt = clusterGroup.hasLayer(m.layer);
+        if (should && !hasIt) toAdd.push(m.layer);
+        if (!should && hasIt) toRemove.push(m.layer);
       });
+      if (toRemove.length) clusterGroup.removeLayers(toRemove);
+      if (toAdd.length)    clusterGroup.addLayers(toAdd);
     }
     document.querySelectorAll(".chip").forEach(c =>
       c.addEventListener("click", () => applyFilter(c.dataset.filter))
@@ -1162,7 +1200,7 @@
       return escapeHtml(txt);
     }
 
-    function addCentroToMap(c) {
+    function buildCentroLayer(c) {
       const layer = L.marker([c.lat, c.lng], { icon: makeCentroIcon() });
       const acepta   = c.acepta   ? `<div class="popup-acepta"><b>Aceptan:</b> ${escapeHtml(c.acepta)}</div>` : "";
       const contacto = c.contacto ? `<div class="popup-contacto"><b>Contacto:</b> ${renderContacto(c.contacto)}</div>` : "";
@@ -1171,22 +1209,31 @@
         `<span class="popup-badge" style="background:#075985;color:#bae6fd;">📦 Centro de acopio</span><br>` +
         `<div class="popup-org">${escapeHtml(c.org)}</div>` +
         `<div class="popup-addr">${escapeHtml(c.addr)}</div>` +
-        acepta + contacto + ciudad
+        acepta + contacto + ciudad +
+        `<div>${gmapsLink(c.lat, c.lng)}</div>`
       );
-      const entry = { layer, isCentro: true, category: "centro", report_type: null, created_at: null };
-      markers.push(entry);
-      if (matchesFilter(entry, activeFilter)) layer.addTo(map);
+      return layer;
     }
 
-    if (Array.isArray(window.CENTROS)) {
-      window.CENTROS.forEach((c) => {
-        if (Number.isFinite(c.lat) && Number.isFinite(c.lng)
-            && c.lat >= -1 && c.lat <= 17 && c.lng >= -75 && c.lng <= -58) {
-          addCentroToMap(c);
-        }
-      });
-      showStatus(`${window.CENTROS.length} centros de acopio cargados`, "ok", 2000);
+    // Bulk-load: addLayers() es MUCHO más rápido que muchos addLayer() sueltos.
+    // Lo deferimos un tick para que el mapa pinte primero.
+    function loadCentros() {
+      if (!Array.isArray(window.CENTROS)) return;
+      const layersToAdd = [];
+      for (const c of window.CENTROS) {
+        if (!Number.isFinite(c.lat) || !Number.isFinite(c.lng)) continue;
+        if (c.lat < -1 || c.lat > 17 || c.lng < -75 || c.lng > -58) continue;
+        const layer = buildCentroLayer(c);
+        const entry = { layer, isCentro: true, category: "centro", report_type: null, created_at: null };
+        markers.push(entry);
+        if (matchesFilter(entry, activeFilter)) layersToAdd.push(layer);
+      }
+      clusterGroup.addLayers(layersToAdd);
+      showStatus(`${layersToAdd.length} centros de acopio cargados`, "ok", 2000);
     }
+    // Defer: el mapa se ve primero, los centros aparecen ~50ms después
+    if (window.requestIdleCallback) requestIdleCallback(loadCentros, { timeout: 500 });
+    else setTimeout(loadCentros, 50);
 
     // ============================================================
     // INFO MODAL (Sobre / Privacidad / Términos / Emergencias)
