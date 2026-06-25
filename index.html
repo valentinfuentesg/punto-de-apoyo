@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#CE1126" />
+  <meta name="description" content="Punto de Apoyo — mapa colaborativo de emergencia en Venezuela. Reporta y encuentra recursos cerca de ti. Centros de acopio, ayuda mutua, sin fines de lucro." />
+  <meta name="robots" content="index, follow" />
+
+  <!-- ===== Cabeceras de seguridad ===== -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    base-uri 'self';
+    object-src 'none';
+    frame-ancestors 'none';
+    form-action 'self';
+    script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+    style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+    img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org;
+    font-src 'self' data:;
+    connect-src 'self' https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org;
+    manifest-src 'self';
+    upgrade-insecure-requests;
+  " />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=()" />
+
+  <title>Punto de Apoyo 🇻🇪 — Mapa de Emergencia</title>
+
+  <!-- Favicon: pin con colores de la bandera de Venezuela -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><clipPath id='p'><path d='M32 3 C18 3 8 13 8 27 C8 43 32 61 32 61 C32 61 56 43 56 27 C56 13 46 3 32 3 Z'/></clipPath></defs><g clip-path='url(%23p)'><rect width='64' height='21' y='0' fill='%23FCDC23'/><rect width='64' height='22' y='21' fill='%230033A0'/><rect width='64' height='21' y='43' fill='%23CE1126'/></g><path d='M32 3 C18 3 8 13 8 27 C8 43 32 61 32 61 C32 61 56 43 56 27 C56 13 46 3 32 3 Z' fill='none' stroke='%23000' stroke-width='2.5'/><circle cx='32' cy='26' r='6.5' fill='%23fff' stroke='%23000' stroke-width='1.5'/></svg>" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><clipPath id='p'><path d='M32 3 C18 3 8 13 8 27 C8 43 32 61 32 61 C32 61 56 43 56 27 C56 13 46 3 32 3 Z'/></clipPath></defs><g clip-path='url(%23p)'><rect width='64' height='21' y='0' fill='%23FCDC23'/><rect width='64' height='22' y='21' fill='%230033A0'/><rect width='64' height='21' y='43' fill='%23CE1126'/></g></svg>" />
+
+  <!-- Leaflet (jsdelivr es más confiable que unpkg en LATAM) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+
+  <!-- Centros de acopio (datos estáticos) -->
+  <script src="centros.js"></script>
+
+  <style>
+    :root {
+      --bg: #000000;
+      --fg: #f5f5f5;
+      --muted: #9ca3af;
+      --panel: #0a0a0a;
+      --border: #1f1f1f;
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      background: var(--bg); color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overscroll-behavior: none;
+    }
+
+    #map { position: absolute; inset: 0; background: #e5e7eb; }
+    .leaflet-container { background: #e5e7eb; font-family: inherit; }
+    /* Mapa en modo claro — sin filtros */
+    .leaflet-control-attribution { background: rgba(0,0,0,0.6) !important; color: #888 !important; font-size: 10px !important; }
+    .leaflet-control-attribution a { color: #aaa !important; }
+    .leaflet-bar a {
+      background-color: #111 !important; color: #fff !important;
+      border-bottom: 1px solid var(--border) !important;
+    }
+    .leaflet-bar a:hover { background-color: #1a1a1a !important; }
+
+    /* Header */
+    .header {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 500;
+      padding: 10px 14px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.85), rgba(0,0,0,0));
+      pointer-events: none;
+    }
+    .header h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
+    .header p  { margin: 2px 0 0; font-size: 11px; color: var(--muted); }
+
+    /* Buscador (Nominatim) */
+    .search-wrap {
+      position: absolute; top: 50px; left: 10px; right: 10px;
+      z-index: 550; max-width: 520px; margin: 0 auto;
+    }
+    .search-input {
+      width: 100%;
+      background: rgba(17,17,17,0.95);
+      border: 1px solid var(--border); border-radius: 10px;
+      color: #fff; font-size: 14px;
+      padding: 10px 36px 10px 36px;
+      outline: none;
+      backdrop-filter: blur(6px);
+    }
+    .search-input::placeholder { color: #6b7280; }
+    .search-input:focus { border-color: var(--accent); }
+    .search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--muted); font-size: 14px; pointer-events: none;
+    }
+    .search-clear {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: transparent; border: none; color: var(--muted);
+      font-size: 16px; cursor: pointer; display: none;
+    }
+    .search-clear.show { display: block; }
+    .search-results {
+      margin-top: 4px;
+      background: rgba(10,10,10,0.97);
+      border: 1px solid var(--border); border-radius: 10px;
+      max-height: 240px; overflow-y: auto;
+      display: none;
+      backdrop-filter: blur(6px);
+    }
+    .search-results.show { display: block; }
+    .search-item {
+      padding: 10px 12px; font-size: 13px; cursor: pointer;
+      border-bottom: 1px solid #181818;
+    }
+    .search-item:last-child { border-bottom: none; }
+    .search-item:hover, .search-item.active { background: #1a1a1a; }
+    .search-item small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+    /* Filtros */
+    .filters {
+      position: absolute; top: 102px; left: 8px; right: 8px;
+      z-index: 500;
+      display: flex; gap: 6px; overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .filters::-webkit-scrollbar { display: none; }
+    .chip {
+      flex: 0 0 auto;
+      background: rgba(17,17,17,0.85);
+      border: 1px solid var(--border); color: #fff;
+      padding: 6px 11px; border-radius: 999px;
+      font-size: 12px; cursor: pointer; user-select: none;
+      backdrop-filter: blur(6px);
+    }
+    .chip.active { background: var(--accent); border-color: var(--accent); }
+
+    /* Botón principal (FAB) */
+    .fab {
+      position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 600;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 999px;
+      padding: 16px 28px; font-size: 16px; font-weight: 700;
+      box-shadow: 0 8px 24px rgba(239,68,68,0.45);
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .fab:active { transform: translateX(-50%) scale(0.97); }
+    .fab:hover { background: var(--accent-hover); }
+    .fab.cancel { background: #374151; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+
+    /* Botón "ubicarme" */
+    .locate-btn {
+      position: absolute; bottom: 28px; right: 16px;
+      z-index: 600;
+      width: 48px; height: 48px;
+      background: #111; color: #fff;
+      border: 1px solid var(--border); border-radius: 50%;
+      font-size: 20px; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    }
+    .locate-btn:active { background: #1a1a1a; }
+
+    /* Toast */
+    .toast {
+      position: absolute; top: 96px; left: 50%; transform: translateX(-50%);
+      z-index: 600;
+      background: rgba(17,17,17,0.95);
+      color: #fff;
+      padding: 10px 16px; border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 13px; max-width: 90%; text-align: center;
+      display: none;
+    }
+    .toast.show { display: block; }
+
+    /* Modal */
+    .modal-bg {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.7);
+      display: none; align-items: flex-end; justify-content: center;
+    }
+    .modal-bg.show { display: flex; }
+    .modal {
+      width: 100%; max-width: 480px;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      border-radius: 16px 16px 0 0;
+      padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+      animation: slideUp 0.2s ease-out;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal h2 { margin: 0 0 12px; font-size: 15px; color: var(--muted); font-weight: 500; text-align: center; }
+    .cat-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    .cat-btn {
+      display: flex; align-items: center; gap: 12px;
+      width: 100%; padding: 14px 16px;
+      background: #111; border: 1px solid var(--border); border-radius: 12px;
+      color: #fff; font-size: 15px; font-weight: 500;
+      cursor: pointer; text-align: left;
+    }
+    .cat-btn:active { background: #1a1a1a; }
+    .cat-btn .emoji { font-size: 22px; width: 28px; text-align: center; }
+    .modal .cancel-btn {
+      width: 100%; margin-top: 10px; padding: 12px;
+      background: transparent; color: var(--muted);
+      border: none; font-size: 14px; cursor: pointer;
+    }
+
+    /* Popup */
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+      background: #111 !important; color: #fff !important; border: 1px solid var(--border);
+    }
+    .leaflet-popup-content { margin: 10px 12px !important; font-size: 13px; }
+    .leaflet-popup-content b { font-size: 14px; }
+    .leaflet-popup-content small { color: var(--muted); }
+    .popup-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      font-size: 10px; font-weight: 700; margin-bottom: 4px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .popup-badge.offer   { background: #065f46; color: #d1fae5; }
+    .popup-badge.request { background: #7c2d12; color: #fed7aa; }
+
+    /* PINES — badge circular con borde según TIPO (verde = ofrece, naranja = solicita) */
+    .pin-badge {
+      width: 38px; height: 38px;
+      background: #fff;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; line-height: 1;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+      border: 3px solid #999;
+    }
+    .pin-badge.offer   { border-color: #10b981; }     /* verde = ofrezco */
+    .pin-badge.request { border-color: #f97316; }     /* naranja = solicito */
+    .pin-badge.alert   { border-color: #eab308; background: #fef3c7; } /* amarillo = peligro */
+    .pin-badge.centro  { border-color: #0ea5e9; background: #e0f2fe; } /* azul = centro de acopio */
+    .pin-pending { animation: bounce 0.6s infinite alternate; }
+    @keyframes bounce { to { transform: translateY(-4px); } }
+
+    /* Botón de info / ayuda flotante */
+    .info-btn {
+      position: absolute; top: 12px; right: 12px; z-index: 700;
+      width: 40px; height: 40px;
+      background: #111; color: #fff;
+      border: 1px solid var(--border); border-radius: 50%;
+      font-size: 18px; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .info-btn:hover { background: #1a1a1a; }
+    /* Le dejamos espacio al zoom de Leaflet */
+    .leaflet-top.leaflet-right { top: 60px; }
+
+    /* Modal de info — versión scrollable */
+    .info-modal-bg {
+      position: fixed; inset: 0; z-index: 1100;
+      background: rgba(0,0,0,0.7);
+      display: none; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .info-modal-bg.show { display: flex; }
+    .info-modal {
+      width: 100%; max-width: 540px;
+      max-height: 85vh;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex; flex-direction: column;
+      animation: slideUp 0.2s ease-out;
+    }
+    .info-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .info-header h2 { margin: 0; font-size: 16px; }
+    .info-close {
+      background: transparent; border: none; color: var(--muted);
+      font-size: 22px; cursor: pointer; padding: 0 4px;
+    }
+    .info-body {
+      overflow-y: auto;
+      padding: 14px 16px;
+      font-size: 13px; line-height: 1.5; color: #e5e7eb;
+    }
+    .info-body section { margin-bottom: 18px; }
+    .info-body h3 {
+      margin: 0 0 8px; font-size: 14px; color: #fff;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .info-body p { margin: 0 0 8px; color: #cbd5e1; }
+    .info-body ul { margin: 6px 0; padding-left: 22px; color: #cbd5e1; }
+    .info-body li { margin-bottom: 3px; }
+    .info-body a { color: #60a5fa; text-decoration: none; }
+    .info-body a:hover { text-decoration: underline; }
+
+    /* Lista de teléfonos de emergencia */
+    .phone-list {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px;
+    }
+    .phone-card {
+      background: #0a0a0a; border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px; text-align: center;
+    }
+    .phone-card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .phone-card .num { display: block; font-size: 22px; font-weight: 700; color: #fff; margin-top: 2px; text-decoration: none; }
+    .phone-card .num:hover { color: var(--accent); }
+    .phone-sub {
+      background: #0a0a0a; border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px; margin-top: 8px;
+    }
+    .phone-sub h4 { margin: 0 0 6px; font-size: 12px; color: #fff; }
+    .phone-sub .num-line { display: block; font-size: 13px; color: #cbd5e1; padding: 2px 0; text-decoration: none; }
+    .phone-sub .num-line:hover { color: var(--accent); }
+
+    /* Popup específico para centros */
+    .popup-org { font-weight: 700; font-size: 14px; color: #38bdf8; margin-bottom: 2px; }
+    .popup-addr { color: #fff; margin-bottom: 4px; }
+    .popup-acepta { color: #d1d5db; font-size: 12px; margin: 4px 0; }
+    .popup-contacto a { color: #60a5fa; }
+
+    /* Tabs Ofrezco / Necesito en el modal */
+    .type-tabs {
+      display: flex; gap: 8px; margin-bottom: 14px;
+      background: #0a0a0a; padding: 4px; border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .type-tab {
+      flex: 1; padding: 12px 8px; border-radius: 9px;
+      background: transparent; border: none; color: var(--muted);
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .type-tab .ttitle { font-size: 14px; }
+    .type-tab .tsub   { font-size: 10px; font-weight: 400; opacity: 0.7; }
+    .type-tab.active.offer   { background: #065f46; color: #d1fae5; }
+    .type-tab.active.request { background: #7c2d12; color: #fed7aa; }
+
+    /* Indicador de tipo activo en el FAB */
+    .fab.offer   { background: #10b981; box-shadow: 0 8px 24px rgba(16,185,129,0.45); }
+    .fab.request { background: #f97316; box-shadow: 0 8px 24px rgba(249,115,22,0.45); }
+
+    /* Leyenda flotante */
+    .legend {
+      position: absolute; bottom: 90px; right: 16px; z-index: 500;
+      background: rgba(17,17,17,0.92);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 10px; font-size: 11px;
+      backdrop-filter: blur(6px);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .legend-row { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; border: 3px solid; background: #fff; }
+    .legend-dot.offer   { border-color: #10b981; }
+    .legend-dot.request { border-color: #f97316; }
+
+    /* ============== RESPONSIVE (móvil) ============== */
+    @media (max-width: 600px) {
+      .header h1 { font-size: 14px; }
+      .header p  { font-size: 10px; }
+      .search-input { font-size: 13px; padding: 9px 32px; }
+      .filters { gap: 5px; }
+      .chip { padding: 5px 10px; font-size: 11px; }
+      .fab { padding: 14px 22px; font-size: 15px; bottom: 18px; }
+      .locate-btn { width: 44px; height: 44px; bottom: 20px; right: 12px; }
+      .legend { bottom: 78px; right: 12px; font-size: 10px; padding: 6px 8px; }
+      .cat-btn { padding: 12px 14px; font-size: 14px; }
+      .type-tab .ttitle { font-size: 13px; }
+    }
+    @media (max-height: 600px) {
+      .legend { display: none; }
+    }
+    /* Usar 100dvh donde se pueda (evita salto por barra de URL del móvil) */
+    @supports (height: 100dvh) {
+      html, body { height: 100dvh; }
+    }
+
+    /* Status / errores visibles */
+    .status {
+      position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+      z-index: 700;
+      padding: 8px 14px; border-radius: 8px; font-size: 12px;
+      max-width: 92%; text-align: center;
+      display: none;
+    }
+    .status.show { display: block; }
+    .status.ok  { background: #064e3b; color: #d1fae5; }
+    .status.err { background: #7f1d1d; color: #fee2e2; }
+
+    .error-banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 2000;
+      background: #7f1d1d; color: #fff;
+      padding: 10px 14px; font-size: 12px;
+      display: none;
+    }
+    .error-banner.show { display: block; }
+    .error-banner code { background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+  <div id="errorBanner" class="error-banner"></div>
+  <div id="map"></div>
+
+  <div class="header">
+    <h1>🇻🇪 Punto de Apoyo</h1>
+    <p>Mapa de emergencia · Centros de acopio · Reportes ciudadanos</p>
+  </div>
+
+  <div class="search-wrap" style="position:absolute;">
+    <div style="position:relative;">
+      <span class="search-icon">🔍</span>
+      <input id="searchInput" class="search-input" type="text"
+             placeholder="Buscar dirección, calle o sector…"
+             autocomplete="off" maxlength="80"
+             autocorrect="off" autocapitalize="none" spellcheck="false" />
+      <button id="searchClear" class="search-clear" type="button">✕</button>
+    </div>
+    <div id="searchResults" class="search-results"></div>
+  </div>
+
+  <div id="filters" class="filters">
+    <div class="chip active" data-filter="all">Todos</div>
+    <div class="chip" data-filter="centros">📦 Centros de acopio</div>
+    <div class="chip" data-filter="type:offer">🟢 Ofrecen</div>
+    <div class="chip" data-filter="type:request">🟠 Solicitan</div>
+    <div class="chip" data-filter="energia">⚡ Energía</div>
+    <div class="chip" data-filter="senal">📡 Señal</div>
+    <div class="chip" data-filter="suministros">💧 Suministros</div>
+    <div class="chip" data-filter="asistencia">⚕️ Médica</div>
+    <div class="chip" data-filter="peligro">🚫 Peligro</div>
+  </div>
+
+  <button id="infoBtn" class="info-btn" title="Información y emergencias" aria-label="Información y emergencias">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+      <line x1="12" y1="11" x2="12" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="12" cy="7.5" r="1.3" fill="currentColor"/>
+    </svg>
+  </button>
+
+  <!-- Modal de información (Sobre / Privacidad / Términos / Emergencias) -->
+  <div id="infoModal" class="info-modal-bg">
+    <div class="info-modal">
+      <div class="info-header">
+        <h2>🇻🇪 Punto de Apoyo</h2>
+        <button class="info-close" id="infoClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="info-body">
+
+        <section>
+          <h3>🆘 Teléfonos de emergencia</h3>
+          <p style="font-size:12px;color:#9ca3af;">Toca un número para llamar.</p>
+          <div class="phone-list">
+            <div class="phone-card">
+              <span class="label">CANTV (fijo)</span>
+              <a class="num" href="tel:171">171</a>
+            </div>
+            <div class="phone-card">
+              <span class="label">Movilnet</span>
+              <a class="num" href="tel:*1">*1</a>
+            </div>
+            <div class="phone-card">
+              <span class="label">Digitel</span>
+              <a class="num" href="tel:112">112</a>
+            </div>
+            <div class="phone-card">
+              <span class="label">Movistar</span>
+              <a class="num" href="tel:911">911</a>
+            </div>
+          </div>
+
+          <div class="phone-sub">
+            <h4>🚑 Aeroambulancias (Caracas)</h4>
+            <a class="num-line" href="tel:02129932541">(0212) 993-25-41</a>
+            <a class="num-line" href="tel:02129928980">(0212) 992-89-80</a>
+            <a class="num-line" href="tel:02129928990">(0212) 992-89-90</a>
+            <a class="num-line" href="tel:02129917940">(0212) 991-79-40</a>
+          </div>
+
+          <div class="phone-sub">
+            <h4>🚑 Rescarven (Caracas)</h4>
+            <a class="num-line" href="tel:02129936911">(0212) 993-69-11</a>
+            <a class="num-line" href="tel:02129936991">(0212) 993-69-91</a>
+            <a class="num-line" href="tel:02129931310">(0212) 993-13-10</a>
+            <a class="num-line" href="tel:02129933367">(0212) 993-33-67</a>
+          </div>
+
+          <div class="phone-sub">
+            <h4>🚑 Ambulancia Metropolitano (Caracas)</h4>
+            <a class="num-line" href="tel:02125454545">(0212) 545-45-45</a>
+          </div>
+        </section>
+
+        <section>
+          <h3>ℹ️ Sobre Punto de Apoyo</h3>
+          <p><strong>Iniciativa ciudadana, sin fines de lucro</strong>, creada en respuesta a la emergencia sísmica en Venezuela. Su único propósito es facilitar la <strong>ayuda mutua</strong>: que cualquier persona pueda encontrar y compartir información sobre centros de acopio, agua, comida, energía, señal, atención médica y zonas de peligro.</p>
+          <p>No es un servicio oficial, no recibe pago, no vende publicidad. Los datos son aportados por la comunidad y por listas públicas de organizaciones civiles.</p>
+          <p style="background:#0a0a0a;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;">
+            🤖 <strong>Construido con asistencia de IA.</strong> El sitio fue diseñado y programado en colaboración con un asistente de inteligencia artificial (Claude). El código es revisado por humanos, pero pueden existir errores. Si encuentras alguno, repórtalo.
+          </p>
+        </section>
+
+        <section>
+          <h3>📨 Contacto</h3>
+          <p>Para sugerencias, reportar errores, agregar centros de acopio o cualquier consulta:</p>
+          <p style="text-align:center;">
+            <a href="https://twitter.com/vxlentinF" target="_blank" rel="noopener noreferrer"
+               style="display:inline-block;background:#0a0a0a;border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-weight:600;">
+               𝕏 @vxlentinF
+            </a>
+          </p>
+        </section>
+
+        <section>
+          <h3>📦 Centros de acopio</h3>
+          <p>Los puntos azules son <strong>centros de acopio oficiales</strong>, recopilados de fuentes públicas (Comando ConVzla, Cáritas, alcaldías, ONGs, sociedad civil). Verifica el horario y los insumos antes de acudir.</p>
+        </section>
+
+        <section>
+          <h3>🔐 Privacidad de datos</h3>
+          <ul>
+            <li><strong>No registramos cuentas, no pedimos email ni nombre.</strong></li>
+            <li>La <strong>geolocalización</strong> ocurre en tu navegador y solo se usa para centrar el mapa. Nunca se envía a nuestro servidor.</li>
+            <li>Cuando reportas un punto, solo guardamos: ubicación tocada (lat/lng), categoría, tipo (ofrece/solicita), una nota opcional y la fecha.</li>
+            <li>Generamos una <strong>huella anónima local</strong> (UUID en tu navegador) para evitar spam. No es tu IP ni tu identidad.</li>
+            <li><strong>No compartimos datos con terceros.</strong> Los reportes son públicos por naturaleza (cualquiera los ve en el mapa).</li>
+            <li>Los reportes ciudadanos <strong>se borran automáticamente a los 7 días</strong>.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>📋 Términos de uso</h3>
+          <ul>
+            <li>Este mapa muestra <strong>información no oficial</strong>. Úsalo como referencia, pero <strong>verifica antes de actuar</strong>, especialmente en situaciones de peligro o salud.</li>
+            <li>No nos responsabilizamos por la veracidad de reportes ciudadanos: cualquiera puede agregar puntos.</li>
+            <li><strong>No abuses del servicio</strong>: hay rate limit de 5 reportes por minuto. El spam o reportes falsos pueden ser bloqueados.</li>
+            <li>Prohibido publicar contenido ofensivo, comercial, político partidista o no relacionado con la emergencia.</li>
+            <li>En emergencias reales de vida o muerte, <strong>llama primero a los servicios oficiales</strong> (171, 112, 911, *1) — esta app no los sustituye.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>💛 Cómo ayudar</h3>
+          <ul>
+            <li>Si conoces un centro de acopio que falta o un dato incorrecto, contacta al equipo (por ahora, vía las redes de las organizaciones listadas).</li>
+            <li>Comparte el mapa con tu comunidad. Mientras más gente lo use, más útil se vuelve.</li>
+            <li>Si tienes recursos (agua, comida, medicinas, ropa, cobijas), llévalos al centro de acopio más cercano marcado en azul.</li>
+          </ul>
+        </section>
+
+        <section>
+          <p style="text-align:center;color:#6b7280;font-size:11px;">
+            Hecho con 💛💙❤️ por y para Venezuela.<br>
+            Datos: OpenStreetMap · Carto · listados públicos de centros de acopio.
+          </p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-row"><span class="legend-dot offer"></span>Ofrece / Tiene</div>
+    <div class="legend-row"><span class="legend-dot request"></span>Necesita / Solicita</div>
+  </div>
+
+  <div id="toast" class="toast">📍 Toca el mapa donde quieras reportar</div>
+  <div id="status" class="status"></div>
+
+  <button id="locateBtn" class="locate-btn" title="Mi ubicación">📍</button>
+  <button id="fab" class="fab">＋ Reportar Punto</button>
+
+  <div id="modal" class="modal-bg">
+    <div class="modal">
+      <h2>¿Qué quieres reportar?</h2>
+      <div class="type-tabs">
+        <button class="type-tab offer active" data-type="offer">
+          <span class="ttitle">🟢 Ofrezco / Tengo</span>
+          <span class="tsub">Hay este recurso disponible aquí</span>
+        </button>
+        <button class="type-tab request" data-type="request">
+          <span class="ttitle">🟠 Necesito ayuda</span>
+          <span class="tsub">Solicito este recurso aquí</span>
+        </button>
+      </div>
+      <div class="cat-grid">
+        <button class="cat-btn" data-cat="energia">     <span class="emoji">⚡</span> Energía (luz, plantas)</button>
+        <button class="cat-btn" data-cat="senal">       <span class="emoji">📡</span> Señal / WiFi</button>
+        <button class="cat-btn" data-cat="suministros"> <span class="emoji">💧</span> Suministros (agua, comida)</button>
+        <button class="cat-btn" data-cat="asistencia">  <span class="emoji">⚕️</span> Asistencia médica</button>
+        <button class="cat-btn" data-cat="peligro">     <span class="emoji">🚫</span> Peligro / Vía trancada</button>
+      </div>
+      <textarea id="noteInput" placeholder="Nota opcional (ej: hora, contacto, detalles)…"
+        maxlength="280" rows="2"
+        style="width:100%; margin-top:10px; padding:10px; background:#111; color:#fff;
+               border:1px solid var(--border); border-radius:10px; font-size:13px;
+               font-family:inherit; resize:none; min-height:50px;"></textarea>
+      <button class="cancel-btn" id="modalCancel">Cancelar</button>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // Manejador global de errores — los muestra en pantalla
+    // ============================================================
+    const errorBanner = document.getElementById("errorBanner");
+    function showFatal(msg) {
+      errorBanner.innerHTML = "⚠️ " + msg;
+      errorBanner.classList.add("show");
+      console.error(msg);
+    }
+    window.addEventListener("error", (e) => showFatal("JS error: <code>" + (e.message || e) + "</code>"));
+    window.addEventListener("unhandledrejection", (e) => showFatal("Promise: <code>" + (e.reason?.message || e.reason) + "</code>"));
+
+    // ============================================================
+    // 1. CREDENCIALES — pega aquí las tuyas
+    //    (la URL se normaliza sola: quita /rest/v1/ y / final)
+    // ============================================================
+    let SUPABASE_URL      = "https://hkvtqoivrciqpiwwjsmz.supabase.co";       // ej: https://xxxxxxx.supabase.co
+    let SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhrdnRxb2l2cmNpcXBpd3dqc216Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MDkzMTIsImV4cCI6MjA5Nzk4NTMxMn0.4fx3IcliiGK1B0RlBJWH5-NQafP65JUMa0Hemdytvyc";  // anon public key
+
+    // Auto-limpieza: si pegaste /rest/v1/ o terminó en /, lo arreglamos
+    SUPABASE_URL = (SUPABASE_URL || "")
+      .trim()
+      .replace(/\/rest\/v1\/?$/i, "")
+      .replace(/\/+$/, "");
+
+    // Validación temprana
+    if (!window.L)        showFatal("Leaflet no cargó. ¿Adblocker bloqueando jsdelivr?");
+    if (!window.supabase) showFatal("Supabase no cargó. ¿Bloqueo de red?");
+
+    const credsOK =
+      SUPABASE_URL && !SUPABASE_URL.startsWith("TU_") &&
+      SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.startsWith("TU_") &&
+      /^https?:\/\//i.test(SUPABASE_URL);
+
+    let sb = null;
+    if (!credsOK) {
+      showFatal("Faltan credenciales de Supabase. Edita <code>index.html</code> y pega tu URL y anon key (líneas ~243-244). El mapa funciona, pero no se guardarán/leerán reportes.");
+    } else {
+      try {
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch (err) {
+        showFatal("createClient falló: <code>" + err.message + "</code>");
+      }
+    }
+
+    // ============================================================
+    // 2. CATEGORÍAS
+    // ============================================================
+    const CATEGORIES = {
+      energia:     { emoji: "⚡",  label: "Energía" },
+      senal:       { emoji: "📡",  label: "Señal / WiFi" },
+      suministros: { emoji: "💧",  label: "Suministros" },
+      asistencia:  { emoji: "⚕️", label: "Asistencia médica" },
+      peligro:     { emoji: "🚫",  label: "Peligro" },
+    };
+
+    // ============================================================
+    // 3. MAPA — restringido SOLO a Venezuela (no se puede panear afuera)
+    // ============================================================
+    // Bounding box aproximado de Venezuela (con un poco de margen)
+    const VE_BOUNDS = L.latLngBounds(
+      [0.5, -74.0],   // suroeste (Amazonas)
+      [12.3, -59.5]   // noreste (Goagira / Delta Amacuro)
+    );
+
+    const map = L.map("map", {
+      zoomControl: false,
+      maxBounds: VE_BOUNDS,
+      maxBoundsViscosity: 1.0,   // 1.0 = no se puede arrastrar nada afuera
+      minZoom: 6,                // a zoom 5 ya verías otros países
+      maxZoom: 19,
+      worldCopyJump: false,
+    });
+    map.fitBounds(VE_BOUNDS);    // ajuste inicial a la silueta del país
+    L.control.zoom({ position: "topright" }).addTo(map);
+
+    // Bloqueo defensivo: si por alguna razón el centro queda fuera, lo regresamos
+    map.on("drag", () => map.panInsideBounds(VE_BOUNDS, { animate: false }));
+
+    // CartoDB Voyager — modo claro, calles coloreadas, labels legibles.
+    // Fallback automático a OSM normal si Carto falla.
+    const cartoLayer = L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+      {
+        maxZoom: 19,
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> · © <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: "abcd",
+      }
+    );
+    let tilesLoadedAny = false;
+    cartoLayer.on("tileload", () => { tilesLoadedAny = true; });
+    cartoLayer.addTo(map);
+
+    // Si en 5s no cargó ni un tile, probamos OSM (con filtro oscuro CSS)
+    setTimeout(() => {
+      if (!tilesLoadedAny) {
+        showFatal("Tiles de CartoDB no responden. Probando OpenStreetMap…");
+        map.removeLayer(cartoLayer);
+        const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19, attribution: "© OpenStreetMap",
+        });
+        osm.on("tileload", () => { tilesLoadedAny = true; });
+        osm.addTo(map);
+      }
+    }, 5000);
+
+    // Asegurar tamaño correcto (importante en algunos contenedores)
+    setTimeout(() => map.invalidateSize(), 0);
+    window.addEventListener("resize", () => map.invalidateSize());
+
+    // Marcador del usuario (azul pulsante)
+    let userMarker = null;
+    function setUserLocation(lat, lng, fly = true) {
+      if (userMarker) map.removeLayer(userMarker);
+      const icon = L.divIcon({
+        html: `<div style="
+          width:18px;height:18px;border-radius:50%;
+          background:#3b82f6;border:3px solid #fff;
+          box-shadow:0 0 0 3px rgba(59,130,246,0.35),0 2px 6px rgba(0,0,0,0.3);
+        "></div>`,
+        className: "", iconSize: [18,18], iconAnchor: [9,9],
+      });
+      userMarker = L.marker([lat, lng], { icon, interactive: false, keyboard: false }).addTo(map);
+      if (fly) map.flyTo([lat, lng], 16, { duration: 1.2 });
+    }
+
+    // Si el usuario acepta, centrar cerca de su ubicación (zoom 16 = nivel de calle)
+    if (navigator.geolocation && window.isSecureContext !== false) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation(pos.coords.latitude, pos.coords.longitude, true);
+          showStatus("📍 Ubicación detectada — cerca de ti", "ok", 2000);
+        },
+        (err) => {
+          if (err.code === err.PERMISSION_DENIED) {
+            showStatus("Ubicación denegada. Usa el botón 📍 o el buscador.", "err", 4000);
+          }
+        },
+        { timeout: 8000, maximumAge: 60000, enableHighAccuracy: true }
+      );
+    }
+
+    // ============================================================
+    // 4. UTILIDADES
+    // ============================================================
+    const $ = (id) => document.getElementById(id);
+    const toast = $("toast"), fab = $("fab"), modal = $("modal"), statusEl = $("status");
+
+    let reportingMode = false;
+    let pendingLatLng = null;
+    let pendingMarker = null;
+    let activeFilter  = "all";   // "all" | "type:offer" | "type:request" | <categoria>
+    let selectedType  = "offer"; // "offer" | "request" — tipo elegido en el modal
+
+    // marker -> { layer, category, report_type, created_at }
+    const markers = [];
+
+    function showToast(msg) { toast.textContent = msg; toast.classList.add("show"); }
+    function hideToast()    { toast.classList.remove("show"); }
+    function showStatus(msg, type = "ok", ms = 2500) {
+      statusEl.textContent = msg;
+      statusEl.className = "status show " + type;
+      clearTimeout(showStatus._t);
+      showStatus._t = setTimeout(() => statusEl.classList.remove("show"), ms);
+    }
+
+    function makeIcon(category, type = "offer", pending = false) {
+      const cat = CATEGORIES[category] || { emoji: "📍" };
+      const cls = category === "peligro" ? "alert" : type;
+      return L.divIcon({
+        html: `<div class="pin-badge ${cls} ${pending ? "pin-pending" : ""}">${cat.emoji}</div>`,
+        className: "", iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -18],
+      });
+    }
+
+    function makeCentroIcon() {
+      return L.divIcon({
+        html: `<div class="pin-badge centro">📦</div>`,
+        className: "", iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -18],
+      });
+    }
+
+    function timeAgo(iso) {
+      const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (sec < 60)      return `hace ${sec}s`;
+      if (sec < 3600)    return `hace ${Math.floor(sec/60)} min`;
+      if (sec < 86400)   return `hace ${Math.floor(sec/3600)} h`;
+      return `hace ${Math.floor(sec/86400)} d`;
+    }
+
+    function typeLabel(t) {
+      if (t === "request") return { txt: "Solicita / Necesita", cls: "request" };
+      return { txt: "Ofrece / Tiene", cls: "offer" };
+    }
+
+    function addReportToMap(r) {
+      const cat = CATEGORIES[r.category] || { emoji: "📍", label: r.category };
+      const type = r.report_type || "offer";
+      const tl = typeLabel(type);
+      const note = r.note ? `<br><span style="color:#fff">${escapeHtml(r.note)}</span>` : "";
+      const layer = L.marker([r.lat, r.lng], { icon: makeIcon(r.category, type) })
+        .bindPopup(
+          `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
+          `<b>${cat.emoji} ${cat.label}</b>${note}<br>` +
+          `<small>${timeAgo(r.created_at)}</small>`
+        );
+      const entry = { layer, category: r.category, report_type: type, created_at: r.created_at };
+      markers.push(entry);
+      if (matchesFilter(entry, activeFilter)) layer.addTo(map);
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c =>
+        ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+    }
+
+    function matchesFilter(m, f) {
+      if (f === "all") return true;
+      if (f === "centros") return m.isCentro === true;
+      if (m.isCentro) return false; // Si filtra por algo no-centro, ocultar centros
+      if (f.startsWith("type:")) return m.report_type === f.slice(5);
+      return m.category === f;
+    }
+
+    function applyFilter(f) {
+      activeFilter = f;
+      document.querySelectorAll(".chip").forEach(c =>
+        c.classList.toggle("active", c.dataset.filter === f)
+      );
+      markers.forEach(m => {
+        const should = matchesFilter(m, f);
+        if (should && !map.hasLayer(m.layer)) m.layer.addTo(map);
+        if (!should && map.hasLayer(m.layer)) map.removeLayer(m.layer);
+      });
+    }
+    document.querySelectorAll(".chip").forEach(c =>
+      c.addEventListener("click", () => applyFilter(c.dataset.filter))
+    );
+
+    // Tabs de tipo (Ofrezco / Necesito) dentro del modal
+    function setType(t) {
+      selectedType = t;
+      document.querySelectorAll(".type-tab").forEach(tab =>
+        tab.classList.toggle("active", tab.dataset.type === t)
+      );
+      // Actualizar color del FAB si está activo en modo cancelar
+      if (reportingMode) {
+        fab.classList.remove("offer", "request");
+        fab.classList.add(t);
+      }
+      // Actualizar pin pendiente si ya está puesto
+      if (pendingMarker && pendingLatLng) {
+        pendingMarker.setIcon(makeIcon("peligro", t, true));
+      }
+    }
+    document.querySelectorAll(".type-tab").forEach(tab =>
+      tab.addEventListener("click", () => setType(tab.dataset.type))
+    );
+
+    // ============================================================
+    // 5. CARGAR REPORTES
+    // ============================================================
+    async function loadReports() {
+      if (!sb) return;
+      // OPTIMIZACIÓN DE BANDWIDTH (plan free 5GB Supabase):
+      // 1) Solo columnas necesarias (evita traer client_fp/note extras si pesan).
+      // 2) Solo activos (is_active = true).
+      // 3) Solo últimas 48h.
+      // 4) Tope duro de 1000 filas (en pico masivo no descarga más).
+      const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await sb
+        .from("reports")
+        .select("id,lat,lng,category,report_type,note,created_at")
+        .eq("is_active", true)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+
+      if (error) {
+        showStatus("Error al cargar: " + error.message, "err", 5000);
+        return;
+      }
+      data.forEach(addReportToMap);
+      showStatus(`${data.length} reporte(s) activos · últimas 48h`, "ok");
+    }
+
+    // ============================================================
+    // 6. FLUJO REPORTAR
+    // ============================================================
+    function enterReportingMode() {
+      reportingMode = true; pendingLatLng = null;
+      fab.textContent = "✕ Cancelar";
+      fab.classList.add("cancel");
+      fab.classList.remove("offer", "request");
+      showToast("📍 Toca el mapa donde quieras reportar");
+      map.getContainer().style.cursor = "crosshair";
+    }
+    function exitReportingMode() {
+      reportingMode = false; pendingLatLng = null;
+      fab.textContent = "＋ Reportar Punto";
+      fab.classList.remove("cancel", "offer", "request");
+      hideToast();
+      map.getContainer().style.cursor = "";
+      if (pendingMarker) { map.removeLayer(pendingMarker); pendingMarker = null; }
+      $("noteInput").value = "";
+    }
+
+    fab.addEventListener("click", () => reportingMode ? exitReportingMode() : enterReportingMode());
+
+    map.on("click", (e) => {
+      if (!reportingMode) return;
+      pendingLatLng = e.latlng;
+      if (pendingMarker) map.removeLayer(pendingMarker);
+      pendingMarker = L.marker(e.latlng, { icon: makeIcon("peligro", selectedType, true) }).addTo(map);
+      modal.classList.add("show");
+    });
+
+    function closeModalKeepMarker() {
+      modal.classList.remove("show");
+      if (pendingMarker) { map.removeLayer(pendingMarker); pendingMarker = null; }
+      pendingLatLng = null;
+      $("noteInput").value = "";
+    }
+
+    $("modalCancel").addEventListener("click", closeModalKeepMarker);
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeModalKeepMarker(); });
+
+    // ============================================================
+    // ANTI-SPAM CLIENT-SIDE
+    // ============================================================
+    // Huella anónima persistente (NO es IP, solo un id local para rate limit en DB)
+    function getClientFp() {
+      let fp = null;
+      try { fp = localStorage.getItem("rs_fp"); } catch {}
+      if (!fp || !/^[a-zA-Z0-9_-]{1,64}$/.test(fp)) {
+        const rnd = crypto.getRandomValues(new Uint8Array(16));
+        fp = Array.from(rnd, b => b.toString(36)).join("").slice(0, 24);
+        try { localStorage.setItem("rs_fp", fp); } catch {}
+      }
+      return fp;
+    }
+    const CLIENT_FP = getClientFp();
+
+    // Cooldown local: 8 segundos entre envíos
+    let lastSubmit = 0;
+    const COOLDOWN_MS = 8000;
+
+    // Venezuela aprox: lat -1..17, lng -75..-58
+    function coordsInVE(lat, lng) {
+      return Number.isFinite(lat) && Number.isFinite(lng)
+          && lat >= -1 && lat <= 17 && lng >= -75 && lng <= -58;
+    }
+
+    document.querySelectorAll(".cat-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!pendingLatLng || !sb) { modal.classList.remove("show"); return; }
+
+        // 1) Cooldown
+        const now = Date.now();
+        if (now - lastSubmit < COOLDOWN_MS) {
+          const wait = Math.ceil((COOLDOWN_MS - (now - lastSubmit)) / 1000);
+          showStatus(`⏱️ Espera ${wait}s antes de otro reporte`, "err", 2500);
+          return;
+        }
+
+        // 2) Validar coordenadas
+        const lat = pendingLatLng.lat, lng = pendingLatLng.lng;
+        if (!coordsInVE(lat, lng)) {
+          showStatus("❌ Coordenadas fuera de Venezuela", "err", 4000);
+          return;
+        }
+
+        // 3) Validar categoría (defensa contra DOM manipulado)
+        const category = btn.dataset.cat;
+        if (!CATEGORIES[category]) {
+          showStatus("❌ Categoría inválida", "err", 3000); return;
+        }
+        if (!["offer", "request"].includes(selectedType)) {
+          showStatus("❌ Tipo inválido", "err", 3000); return;
+        }
+
+        // 4) Sanitizar nota
+        const rawNote = $("noteInput").value;
+        const note = rawNote.replace(/[\x00-\x1f\x7f]/g, "").trim().slice(0, 280) || null;
+
+        const payload = { lat, lng, category, report_type: selectedType, note, client_fp: CLIENT_FP };
+        modal.classList.remove("show");
+        lastSubmit = now;
+
+        const { data, error } = await sb.from("reports").insert(payload).select().single();
+
+        if (pendingMarker) { map.removeLayer(pendingMarker); pendingMarker = null; }
+
+        if (error) {
+          // No exponer detalles internos al usuario
+          const isRate = /rate_limit/i.test(error.message);
+          showStatus(isRate
+            ? "🛑 Demasiados reportes seguidos. Intenta en unos minutos."
+            : "❌ No se pudo guardar el reporte.", "err", 5000);
+          console.error("Insert error:", error);
+          lastSubmit = 0;
+          exitReportingMode();
+          return;
+        }
+        addReportToMap(data);
+        const msg = selectedType === "request"
+          ? "🆘 Solicitud publicada, ¡suerte!"
+          : "✅ Recurso publicado, ¡gracias!";
+        showStatus(msg, "ok");
+        exitReportingMode();
+      });
+    });
+
+    // ============================================================
+    // BUSCADOR (Nominatim — OpenStreetMap, gratis, sin API key)
+    // ============================================================
+    const searchInput   = $("searchInput");
+    const searchResults = $("searchResults");
+    const searchClear   = $("searchClear");
+    let searchTimer = null;
+    let searchAbort = null;
+    let searchMarker = null;
+
+    function hideResults() { searchResults.classList.remove("show"); searchResults.innerHTML = ""; }
+
+    async function doSearch(q) {
+      if (searchAbort) searchAbort.abort();
+      searchAbort = new AbortController();
+      try {
+        const url = "https://nominatim.openstreetmap.org/search"
+                  + "?format=json&addressdetails=1&limit=6"
+                  + "&countrycodes=ve"   // priorizar Venezuela
+                  + "&q=" + encodeURIComponent(q);
+        const res = await fetch(url, {
+          signal: searchAbort.signal,
+          headers: { "Accept-Language": "es" },
+        });
+        const data = await res.json();
+        renderResults(data);
+      } catch (e) {
+        if (e.name !== "AbortError") console.error(e);
+      }
+    }
+
+    function renderResults(items) {
+      // Limpiar siempre (no usar innerHTML con datos externos)
+      searchResults.textContent = "";
+      if (!items || !items.length) {
+        const d = document.createElement("div");
+        d.className = "search-item";
+        d.innerHTML = "<small>Sin resultados</small>";
+        searchResults.appendChild(d);
+        searchResults.classList.add("show");
+        return;
+      }
+      items.forEach((it) => {
+        // Validar tipos: Nominatim es de confianza, pero defensa en profundidad
+        const lat = parseFloat(it.lat), lon = parseFloat(it.lon);
+        if (!isFinite(lat) || !isFinite(lon)) return;
+        if (lat < -1 || lat > 17 || lon < -75 || lon > -58) return; // fuera de VE
+        const name = String(it.display_name || "");
+        const main = name.split(",")[0];
+        const rest = name.split(",").slice(1, 4).join(",").trim();
+
+        const el = document.createElement("div");
+        el.className = "search-item";
+        el.dataset.lat = lat;
+        el.dataset.lon = lon;
+        // Uso textContent para evitar XSS (Nominatim podría devolver entidades inusuales)
+        el.textContent = main;
+        const sm = document.createElement("small");
+        sm.textContent = rest;
+        el.appendChild(sm);
+
+        el.addEventListener("click", () => {
+          map.flyTo([lat, lon], 16, { duration: 0.8 });
+          if (searchMarker) map.removeLayer(searchMarker);
+          searchMarker = L.circleMarker([lat, lon], {
+            radius: 10, color: "#ef4444", weight: 3,
+            fillColor: "#ef4444", fillOpacity: 0.3,
+          }).addTo(map);
+          searchInput.value = main;
+          hideResults();
+        });
+        searchResults.appendChild(el);
+      });
+      searchResults.classList.add("show");
+    }
+
+    searchInput.addEventListener("input", () => {
+      const q = searchInput.value.trim();
+      searchClear.classList.toggle("show", q.length > 0);
+      clearTimeout(searchTimer);
+      if (q.length < 3) { hideResults(); return; }
+      searchTimer = setTimeout(() => doSearch(q), 350);
+    });
+
+    searchClear.addEventListener("click", () => {
+      searchInput.value = ""; searchClear.classList.remove("show"); hideResults();
+      if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
+    });
+
+    // Cerrar al tocar fuera
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".search-wrap")) hideResults();
+    });
+
+    // Botón "ubicarme"
+    $("locateBtn").addEventListener("click", () => {
+      if (!navigator.geolocation) return showStatus("Geolocalización no disponible", "err");
+      $("locateBtn").textContent = "⏳";
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation(pos.coords.latitude, pos.coords.longitude, true);
+          $("locateBtn").textContent = "📍";
+        },
+        (err) => {
+          $("locateBtn").textContent = "📍";
+          showStatus("Ubicación denegada: " + err.message, "err", 4000);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    });
+
+    // ============================================================
+    // CENTROS DE ACOPIO (estáticos desde centros.js)
+    // ============================================================
+    function renderContacto(c) {
+      const txt = String(c || "").trim();
+      if (!txt) return "";
+      // URL → link externo
+      if (/^https?:\/\//i.test(txt)) {
+        const a = document.createElement("a");
+        a.href = txt; a.target = "_blank"; a.rel = "noopener noreferrer";
+        a.textContent = txt.replace(/^https?:\/\/(www\.)?/i, "").slice(0, 50);
+        return a.outerHTML;
+      }
+      // Si parece solo teléfonos/números
+      const phoneOnly = txt.replace(/[\s\-\(\)\+\./]/g, "");
+      if (/^[\d\*]{3,}$/.test(phoneOnly) && phoneOnly.length < 30) {
+        return `<a href="tel:${phoneOnly}">${escapeHtml(txt)}</a>`;
+      }
+      return escapeHtml(txt);
+    }
+
+    function addCentroToMap(c) {
+      const layer = L.marker([c.lat, c.lng], { icon: makeCentroIcon() });
+      const acepta   = c.acepta   ? `<div class="popup-acepta"><b>Aceptan:</b> ${escapeHtml(c.acepta)}</div>` : "";
+      const contacto = c.contacto ? `<div class="popup-contacto"><b>Contacto:</b> ${renderContacto(c.contacto)}</div>` : "";
+      const ciudad   = c.ciudad   ? `<div style="color:#9ca3af;font-size:11px;margin-top:4px;">📍 ${escapeHtml(c.ciudad)}</div>` : "";
+      layer.bindPopup(
+        `<span class="popup-badge" style="background:#075985;color:#bae6fd;">📦 Centro de acopio</span><br>` +
+        `<div class="popup-org">${escapeHtml(c.org)}</div>` +
+        `<div class="popup-addr">${escapeHtml(c.addr)}</div>` +
+        acepta + contacto + ciudad
+      );
+      const entry = { layer, isCentro: true, category: "centro", report_type: null, created_at: null };
+      markers.push(entry);
+      if (matchesFilter(entry, activeFilter)) layer.addTo(map);
+    }
+
+    if (Array.isArray(window.CENTROS)) {
+      window.CENTROS.forEach((c) => {
+        if (Number.isFinite(c.lat) && Number.isFinite(c.lng)
+            && c.lat >= -1 && c.lat <= 17 && c.lng >= -75 && c.lng <= -58) {
+          addCentroToMap(c);
+        }
+      });
+      showStatus(`${window.CENTROS.length} centros de acopio cargados`, "ok", 2000);
+    }
+
+    // ============================================================
+    // INFO MODAL (Sobre / Privacidad / Términos / Emergencias)
+    // ============================================================
+    const infoModal = $("infoModal");
+    $("infoBtn").addEventListener("click", () => infoModal.classList.add("show"));
+    $("infoClose").addEventListener("click", () => infoModal.classList.remove("show"));
+    infoModal.addEventListener("click", (e) => {
+      if (e.target === infoModal) infoModal.classList.remove("show");
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") infoModal.classList.remove("show");
+    });
+
+    // ============================================================
+    // 7. INIT + REALTIME
+    // ============================================================
+    loadReports();
+
+    if (sb) {
+      sb.channel("reports-changes")
+        .on("postgres_changes",
+          { event: "INSERT", schema: "public", table: "reports" },
+          (payload) => addReportToMap(payload.new))
+        .subscribe();
+    }
+  </script>
+</body>
+</html>
