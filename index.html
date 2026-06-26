@@ -804,8 +804,10 @@
             Hecho con 💛💙❤️ por y para Venezuela.<br>
             Datos: OpenStreetMap · Carto · listados públicos de centros de acopio.<br>
             Hospitales adicionales vía
-            <a href="https://terremotovenezuela.app" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">terremotovenezuela.app</a>
-            (API pública).
+            <a href="https://terremotovenezuela.app" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">terremotovenezuela.app</a>.<br>
+            Centros y reportes adicionales vía
+            <a href="https://caracasayuda.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">caracasayuda.com</a>
+            (iniciativa de Caracas Merch).
           </p>
         </section>
       </div>
@@ -1582,7 +1584,8 @@
       const layersToAdd = [];
       for (const c of list) {
         const layer = buildCentroLayer(c);
-        const entry = { layer, isCentro: true, category: "centro", report_type: null, created_at: null };
+        const entry = { layer, isCentro: true, category: "centro", report_type: null, created_at: null,
+                        centroName: (c.org || c.addr || "") };
         markers.push(entry);
         if (matchesFilter(entry, activeFilter)) layersToAdd.push(layer);
       }
@@ -1813,6 +1816,163 @@
     }
     // Cargarlos un par de segundos después del init (no bloquea nada)
     setTimeout(loadTerremotoHospitals, 1800);
+
+    // ============================================================
+    // CARACASAYUDA.COM — merge de su tabla pública `puntos` (Supabase REST).
+    // Su anon key publishable está pública en su HTML; misma exposición que la
+    // nuestra. Solo LECTURA. Atribución visible en el info modal.
+    // ============================================================
+    const CARACAS_AYUDA = {
+      url: "https://zxpfumbsxgnfzxjlhocu.supabase.co",
+      key: "sb_publishable_bx7plOxEb3M4aNID_stt-g_WPh-FS88",
+      cacheKey: "pa_ca_points_v1",
+      maxAgeMs: 10 * 60 * 1000,
+    };
+
+    // Mapeo de SUS categorías a las NUESTRAS (null = saltar)
+    const CA_CAT_MAP = {
+      acopio:       "_centro",         // sentinel: pintar como centro de acopio
+      medico:       "asistencia",
+      medicamentos: "asistencia",
+      comida:       "suministros",
+      alimentos:    "suministros",
+      herramientas: "suministros",
+      mascotas:     "suministros",
+      transporte:   "movilidad",
+      iluminacion:  "energia",
+      voluntarios:  "asistencia",
+      rescate:      "peligro",
+      donaciones:   null,              // monetarias — fuera de scope
+    };
+
+    async function fetchCaracasAyudaPoints() {
+      // 1) caché
+      try {
+        const raw = localStorage.getItem(CARACAS_AYUDA.cacheKey);
+        if (raw) {
+          const obj = JSON.parse(raw);
+          if (obj && Date.now() - obj.t < CARACAS_AYUDA.maxAgeMs && Array.isArray(obj.data)) {
+            return obj.data;
+          }
+        }
+      } catch {}
+      // 2) fetch
+      try {
+        const url = `${CARACAS_AYUDA.url}/rest/v1/puntos`
+                  + `?select=id,nombre,categoria,tipo,estado,lat,lng,direccion,horario,telefono,descripcion,necesitan,ofrecen`
+                  + `&estado=eq.verified&limit=500`;
+        const res = await fetch(url, {
+          headers: {
+            apikey: CARACAS_AYUDA.key,
+            Authorization: `Bearer ${CARACAS_AYUDA.key}`,
+          },
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        try { localStorage.setItem(CARACAS_AYUDA.cacheKey, JSON.stringify({ t: Date.now(), data })); } catch {}
+        return Array.isArray(data) ? data : [];
+      } catch (e) {
+        console.warn("caracasayuda fetch:", e.message);
+        return [];
+      }
+    }
+
+    const CA_BADGE = `<div style="margin-top:6px;font-size:10px;color:#6b7280;">📡 Vía <a href="https://caracasayuda.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">caracasayuda.com</a></div>`;
+
+    function buildCAExternalCentro(p) {
+      const desc    = p.descripcion ? `<div class="popup-acepta">${escapeHtml(p.descripcion)}</div>` : "";
+      const horario = p.horario     ? `<div class="popup-acepta"><b>Horario:</b> ${escapeHtml(p.horario)}</div>` : "";
+      const tel     = p.telefono    ? `<div class="popup-contacto"><b>Tel:</b> ${renderContacto(p.telefono)}</div>` : "";
+      const dir     = p.direccion   ? `<div class="popup-addr">${escapeHtml(p.direccion)}</div>` : "";
+      const layer = L.marker([p.lat, p.lng], { icon: makeCentroIcon() }).bindPopup(
+        `<span class="popup-badge" style="background:#075985;color:#bae6fd;">📦 Centro de acopio</span><br>` +
+        `<div class="popup-org">${escapeHtml(p.nombre || "Centro de acopio")}</div>` +
+        dir + desc + horario + tel +
+        `<div>${gmapsLink(p.lat, p.lng)}</div>` + CA_BADGE
+      );
+      return layer;
+    }
+
+    function buildCAExternalReport(p, mappedCategory) {
+      const cat  = CATEGORIES[mappedCategory] || { emoji: "📍", label: mappedCategory };
+      const type = p.tipo === "necesidad" ? "request" : "offer";
+      const tl   = typeLabel(type);
+      const extras = [p.descripcion, p.necesitan, p.ofrecen].filter(Boolean).join(" · ");
+      const dir    = p.direccion ? `<div style="color:#cbd5e1;font-size:12px;">${escapeHtml(p.direccion)}</div>` : "";
+      const tel    = p.telefono  ? `<div style="font-size:12px;"><b>Tel:</b> ${renderContacto(p.telefono)}</div>` : "";
+      const horario= p.horario   ? `<div style="font-size:12px;"><b>Horario:</b> ${escapeHtml(p.horario)}</div>` : "";
+      const layer = L.marker([p.lat, p.lng], { icon: makeIcon(mappedCategory, type) }).bindPopup(
+        `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
+        `<b>${cat.emoji} ${cat.label}</b><br>` +
+        `<div style="color:#fff;font-weight:600;">${escapeHtml(p.nombre || "")}</div>` +
+        dir +
+        (extras ? `<div style="color:#cbd5e1;font-size:12px;margin-top:4px;">${escapeHtml(extras)}</div>` : "") +
+        tel + horario +
+        `<div>${gmapsLink(p.lat, p.lng)}</div>` + CA_BADGE
+      );
+      return layer;
+    }
+
+    // Dedup: aproximación por nombre normalizado para centros,
+    //        por coordenadas cercanas (~50 m) para reportes.
+    function isCloseTo(lat, lng, otherLat, otherLng, thresholdMeters = 50) {
+      const dLat = (lat - otherLat) * 111000;            // grados a metros aprox
+      const dLng = (lng - otherLng) * 111000 * Math.cos(lat * Math.PI / 180);
+      return Math.sqrt(dLat * dLat + dLng * dLng) < thresholdMeters;
+    }
+
+    async function loadCaracasAyudaPoints() {
+      const points = await fetchCaracasAyudaPoints();
+      if (!points.length) return;
+
+      const existingCentroKeys = new Set(
+        markers.filter(m => m.isCentro)
+               .map(m => normalizeHospName(m.centroName || ""))
+      );
+      const existingReports = markers.filter(m => !m.isCentro && !m.isHospital && m.layer && m.layer.getLatLng);
+
+      let addedC = 0, addedR = 0, skipped = 0;
+      for (const p of points) {
+        if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) { skipped++; continue; }
+        if (p.lat < -1 || p.lat > 17 || p.lng < -75 || p.lng > -58) { skipped++; continue; }
+
+        const mapped = CA_CAT_MAP[p.categoria];
+        if (mapped === undefined || mapped === null) { skipped++; continue; }
+
+        if (mapped === "_centro") {
+          const k = normalizeHospName(p.nombre || "");
+          if (k && existingCentroKeys.has(k)) { skipped++; continue; }
+          const layer = buildCAExternalCentro(p);
+          const entry = { layer, isCentro: true, category: "centro", report_type: null, created_at: null,
+                          centroName: p.nombre || "", source: "ca", isExternal: true };
+          markers.push(entry);
+          if (matchesFilter(entry, activeFilter)) map.addLayer(layer);
+          if (k) existingCentroKeys.add(k);
+          addedC++;
+        } else {
+          // Dedup contra reportes nuestros cercanos en la misma categoría
+          const dup = existingReports.some(m => {
+            if (m.category !== mapped) return false;
+            const ll = m.layer.getLatLng();
+            return isCloseTo(p.lat, p.lng, ll.lat, ll.lng);
+          });
+          if (dup) { skipped++; continue; }
+
+          const type = p.tipo === "necesidad" ? "request" : "offer";
+          const layer = buildCAExternalReport(p, mapped);
+          const entry = { layer, category: mapped, report_type: type, created_at: null,
+                          source: "ca", isExternal: true };
+          markers.push(entry);
+          if (matchesFilter(entry, activeFilter)) map.addLayer(layer);
+          addedR++;
+        }
+      }
+      if (addedC + addedR > 0) {
+        showStatus(`+${addedC} centros y ${addedR} reportes vía caracasayuda.com`, "ok", 3000);
+      }
+    }
+    // Disparar 2.5s después del init (después de centros y antes de Nominatim del resto)
+    setTimeout(loadCaracasAyudaPoints, 2500);
 
     // ============================================================
     // ONBOARDING — solo aparece la primera vez
