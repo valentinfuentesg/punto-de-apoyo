@@ -110,7 +110,9 @@
     .hero-stats span {
       background: rgba(0,0,0,0.55); padding: 3px 9px; border-radius: 999px;
       border: 1px solid rgba(255,255,255,0.15);
+      display: inline-flex; align-items: center; gap: 4px;
     }
+    .hero-stats svg { flex: 0 0 auto; }
     .hero-stats:empty { display: none; }
 
     /* Chip toggleable verde (para "Cerca de mí") */
@@ -1144,7 +1146,7 @@
     function gmapsUrl(lat, lng) {
       return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
     }
-    const SITE_URL = "https://punto-de-apoyo.vercel.app";
+    const SITE_URL = "https://www.puntodeapoyovenezuela.com";
 
     function confirmRow(reportId, count) {
       const already = isConfirmedLocal(reportId);
@@ -1192,7 +1194,7 @@
       const type = r.report_type || "offer";
       const tl = typeLabel(type);
       const note = r.note ? `<br><span style="color:#fff">${escapeHtml(r.note)}</span>` : "";
-      const waText = `${cat.emoji} ${tl.txt}: ${cat.label}\n${r.note ? r.note + "\n" : ""}📍 ${gmapsUrl(r.lat, r.lng)}\n\nVía ${SITE_URL}`;
+      const waText = `${tl.txt}: ${cat.label}\n${r.note ? r.note + "\n" : ""}Ubicación: ${gmapsUrl(r.lat, r.lng)}\n\nMás info en ${SITE_URL}`;
       const layer = L.marker([r.lat, r.lng], { icon: makeIcon(r.category, type) })
         .bindPopup(
           `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
@@ -1244,22 +1246,29 @@
     // ============================================================
     // HERO STATS — recuento de recursos disponibles arriba del mapa
     // ============================================================
+    // Iconos SVG inline para los hero stats (sin emojis, mismo lenguaje visual que los pines)
+    const STAT_SVGS = {
+      centros:    '<svg viewBox="0 0 24 24" width="12" height="12" fill="#0ea5e9"><path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/></svg>',
+      hospitales: '<svg viewBox="0 0 24 24" width="12" height="12" fill="#fca5a5"><rect x="3" y="6" width="18" height="14" rx="1"/><path d="M11 9h2v3h3v2h-3v3h-2v-3H8v-2h3z" fill="#7f1d1d"/></svg>',
+      ofrecen:    '<svg viewBox="0 0 24 24" width="12" height="12"><circle cx="12" cy="12" r="9" fill="#10b981"/></svg>',
+      solicitan:  '<svg viewBox="0 0 24 24" width="12" height="12"><circle cx="12" cy="12" r="9" fill="#f97316"/></svg>',
+    };
     function updateHeroStats() {
       const el = $("heroStats");
       if (!el) return;
-      let centros = 0, hospitales = 0, ofertas = 0, solicitudes = 0;
+      let centros = 0, hospitales = 0, ofrecen = 0, solicitan = 0;
       for (const m of markers) {
         if (m.isCentro)        centros++;
         else if (m.isHospital) hospitales++;
-        else if (m.report_type === "offer")   ofertas++;
-        else if (m.report_type === "request") solicitudes++;
+        else if (m.report_type === "offer")   ofrecen++;
+        else if (m.report_type === "request") solicitan++;
       }
       if (!markers.length) { el.innerHTML = ""; return; }
       const parts = [];
-      if (centros)     parts.push(`<span>📦 ${centros} centros</span>`);
-      if (hospitales)  parts.push(`<span>🏥 ${hospitales} hospitales</span>`);
-      if (ofertas)     parts.push(`<span>🟢 ${ofertas} ofertas</span>`);
-      if (solicitudes) parts.push(`<span>🟠 ${solicitudes} solicitudes</span>`);
+      if (centros)    parts.push(`<span>${STAT_SVGS.centros} ${centros} centros</span>`);
+      if (hospitales) parts.push(`<span>${STAT_SVGS.hospitales} ${hospitales} hospitales</span>`);
+      if (ofrecen)    parts.push(`<span>${STAT_SVGS.ofrecen} ${ofrecen} ofrecen</span>`);
+      if (solicitan)  parts.push(`<span>${STAT_SVGS.solicitan} ${solicitan} solicitan</span>`);
       el.innerHTML = parts.join("");
     }
     // Refrescar cada 2.5s durante el ciclo de carga (los loaders pueblan en async)
@@ -1612,7 +1621,7 @@
       const acepta   = c.acepta   ? `<div class="popup-acepta"><b>Aceptan:</b> ${escapeHtml(c.acepta)}</div>` : "";
       const contacto = c.contacto ? `<div class="popup-contacto"><b>Contacto:</b> ${renderContacto(c.contacto)}</div>` : "";
       const ciudad   = c.ciudad   ? `<div style="color:#9ca3af;font-size:11px;margin-top:4px;">📍 ${escapeHtml(c.ciudad)}</div>` : "";
-      const waText   = `📦 Centro de acopio: ${c.org}\n${c.addr}\n${c.acepta ? "Aceptan: " + c.acepta + "\n" : ""}📍 ${gmapsUrl(c.lat, c.lng)}\n\nVía ${SITE_URL}`;
+      const waText   = `Centro de acopio: ${c.org}\n${c.addr}\n${c.acepta ? "Aceptan: " + c.acepta + "\n" : ""}Ubicación: ${gmapsUrl(c.lat, c.lng)}\n\nMás info en ${SITE_URL}`;
       layer.bindPopup(
         `<span class="popup-badge" style="background:#075985;color:#bae6fd;">📦 Centro de acopio</span><br>` +
         `<div class="popup-org">${escapeHtml(c.org)}</div>` +
@@ -1986,28 +1995,47 @@
         const lugares = Array.isArray(json?.data) ? json.data : [];
         if (!lugares.length) return;
 
-        // Filtrar: solo hospitales con >0 localizados; el resto son ruido
-        const existingKeys = new Set(
-          markers.filter(m => m.isHospital).map(m => canonicalize(m.hospitalName).key)
-        );
-        const counts = {};
+        // Agrupar localizados por canonical key (puede haber varias variantes del mismo lugar)
+        const byKey = {};  // key -> { display, coords, count }
         for (const l of lugares) {
           if (!l || !l.nombre) continue;
           if (l.tipo !== "hospital" && l.tipo !== "recinto") continue;
           const n = Number(l.totalLocalizados) || 0;
           if (n < 1) continue;
-          if (existingKeys.has(canonicalize(l.nombre).key)) continue;
-          counts[l.nombre] = (counts[l.nombre] || 0) + n;
+          const c = canonicalize(l.nombre);
+          if (byKey[c.key]) byKey[c.key].count += n;
+          else byKey[c.key] = { display: c.display, coords: c.coords, count: n };
         }
-        if (Object.keys(counts).length) {
-          renderHospitalMarkers(counts);
-          showStatus(`+${Object.keys(counts).length} hospitales adicionales cargados`, "ok", 2500);
+
+        // Para los que YA están en el mapa: actualizar count (sumar) y re-render del popup
+        let updated = 0, newCounts = {};
+        for (const [key, slot] of Object.entries(byKey)) {
+          const existing = markers.find(m => m.isHospital && canonicalize(m.hospitalName).key === key);
+          if (existing) {
+            // Sumamos los nuevos a los existentes (fuentes distintas, mejor reportar el total)
+            existing.hospitalCount = (existing.hospitalCount || 0) + slot.count;
+            const coords = existing.hospitalCoords;
+            existing.layer.setPopupContent(buildHospitalPopup(
+              existing.hospitalName,
+              existing.hospitalCount,
+              { bloodDonors: !!coords?.bloodDonors }
+            ));
+            updated++;
+          } else {
+            newCounts[slot.display] = slot.count;
+          }
+        }
+        if (Object.keys(newCounts).length) renderHospitalMarkers(newCounts);
+
+        const newN = Object.keys(newCounts).length;
+        if (updated || newN) {
+          showStatus(`Hospitales: +${updated} actualizados${newN ? `, +${newN} nuevos` : ""}`, "ok", 2500);
         }
       } catch (e) {
         console.warn("localizadosvenezuela fetch:", e.message);
       }
     }
-    setTimeout(loadLocalizadosHospitals, 2000);
+    setTimeout(loadLocalizadosHospitals, 2500);
 
     // ============================================================
     // CARACASAYUDA.COM — merge de su tabla pública `puntos` (Supabase REST).
@@ -2077,7 +2105,7 @@
       const horario = p.horario     ? `<div class="popup-acepta"><b>Horario:</b> ${escapeHtml(p.horario)}</div>` : "";
       const tel     = p.telefono    ? `<div class="popup-contacto"><b>Tel:</b> ${renderContacto(p.telefono)}</div>` : "";
       const dir     = p.direccion   ? `<div class="popup-addr">${escapeHtml(p.direccion)}</div>` : "";
-      const waText = `📦 Centro de acopio: ${p.nombre || ""}\n${p.direccion || ""}\n${p.descripcion ? p.descripcion + "\n" : ""}📍 ${gmapsUrl(p.lat, p.lng)}\n\nVía ${SITE_URL}`;
+      const waText = `Centro de acopio: ${p.nombre || ""}\n${p.direccion || ""}\n${p.descripcion ? p.descripcion + "\n" : ""}Ubicación: ${gmapsUrl(p.lat, p.lng)}\n\nMás info en ${SITE_URL}`;
       const layer = L.marker([p.lat, p.lng], { icon: makeCentroIcon() }).bindPopup(
         `<span class="popup-badge" style="background:#075985;color:#bae6fd;">📦 Centro de acopio</span><br>` +
         `<div class="popup-org">${escapeHtml(p.nombre || "Centro de acopio")}</div>` +
@@ -2095,7 +2123,7 @@
       const dir    = p.direccion ? `<div style="color:#cbd5e1;font-size:12px;">${escapeHtml(p.direccion)}</div>` : "";
       const tel    = p.telefono  ? `<div style="font-size:12px;"><b>Tel:</b> ${renderContacto(p.telefono)}</div>` : "";
       const horario= p.horario   ? `<div style="font-size:12px;"><b>Horario:</b> ${escapeHtml(p.horario)}</div>` : "";
-      const waText = `${cat.emoji} ${tl.txt}: ${cat.label}\n${p.nombre || ""}\n${p.direccion || ""}\n${extras ? extras + "\n" : ""}📍 ${gmapsUrl(p.lat, p.lng)}\n\nVía ${SITE_URL}`;
+      const waText = `${tl.txt}: ${cat.label}\n${p.nombre || ""}\n${p.direccion || ""}\n${extras ? extras + "\n" : ""}Ubicación: ${gmapsUrl(p.lat, p.lng)}\n\nMás info en ${SITE_URL}`;
       const layer = L.marker([p.lat, p.lng], { icon: makeIcon(mappedCategory, type) }).bindPopup(
         `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
         `<b>${cat.emoji} ${cat.label}</b><br>` +
@@ -2162,8 +2190,9 @@
           addedR++;
         }
       }
-      if (addedC + addedR > 0) {
-        showStatus(`+${addedC} centros y ${addedR} reportes cargados`, "ok", 3000);
+      // Solo mostramos centros en el toast — los reportes se ven directo en los hero stats
+      if (addedC > 0) {
+        showStatus(`+${addedC} centros adicionales cargados`, "ok", 3000);
       }
     }
     // Disparar 2.5s después del init (después de centros y antes de Nominatim del resto)
@@ -2225,9 +2254,13 @@
     // Match por substring case-insensitive del nombre del sheet.
     const HOSPITAL_COORDS = [
       { match: /universitario.*caracas|huc|clin[ií]cas.*caracas/i, name: "Hospital Universitario de Caracas (HUC)", lat: 10.4923, lng: -66.8908, bloodDonors: true },
-      { match: /vargas.*caracas|jos[eé] mar[ií]a vargas/i,         name: "Hospital Vargas de Caracas",              lat: 10.5023, lng: -66.9136, bloodDonors: true },
+      // Vargas LA GUAIRA va PRIMERO para que el regex de Caracas no se lo coma
+      { match: /vargas.*la guaira|guaira.*vargas/i,                 name: "Hospital José María Vargas (La Guaira)",  lat: 10.6033, lng: -66.9419 },
+      { match: /vargas.*caracas|jos[eé] mar[ií]a vargas(?!.*guaira)/i, name: "Hospital Vargas de Caracas",           lat: 10.5023, lng: -66.9136, bloodDonors: true },
+      { match: /seguro social.*guaira|guaira.*seguro social/i,      name: "Hospital del Seguro Social (La Guaira)",  lat: 10.5983, lng: -66.9281 },
       { match: /domingo luciani|el llanito/i,                       name: "Hospital Domingo Luciani (El Llanito)",   lat: 10.4836, lng: -66.8067, bloodDonors: true },
-      { match: /p[eé]rez de le[oó]n|p[eé]rez le[oó]n|petare/i,      name: "Hospital Pérez de León (Petare)",         lat: 10.4951, lng: -66.7889 },
+      // Ana Francisca Pérez de León = nombre completo del Pérez de León (Petare)
+      { match: /p[eé]rez de le[oó]n|p[eé]rez le[oó]n|ana francisca|petare/i, name: "Hospital Ana Francisca Pérez de León (Petare)", lat: 10.4951, lng: -66.7889 },
       { match: /miguel p[eé]rez carre[nñ]o|caricuao|p[eé]rez carre[nñ]o/i, name: "Hospital Miguel Pérez Carreño",     lat: 10.4598, lng: -66.9716, bloodDonors: true },
       { match: /magallanes de catia/i,                              name: "Hospital de Catia (Magallanes)",          lat: 10.5142, lng: -66.9489 },
       // Periférico de Catia tiene OTRO nombre: "Dr. Ricardo Baquero González". Cubrimos typo "Hopital".
@@ -2333,10 +2366,10 @@
              `🔍 Buscar familiar (lista completa)</a></div>` +
              `<div>${gmapsLink(0, 0).replace(/destination=0,0/, `destination=${encodeURIComponent(name + ', Venezuela')}`)}` +
              waShareButton(
-               `🏥 ${name}\n${count} ${count === 1 ? "paciente registrado" : "pacientes registrados"}` +
-               `${opts.bloodDonors ? "\n🩸 BUSCAN DONANTES DE SANGRE" : ""}` +
-               `\n📍 https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ", Venezuela")}` +
-               `\n\nVía ${SITE_URL}`
+               `Hospital ${name}\n${count} ${count === 1 ? "paciente registrado" : "pacientes registrados"}` +
+               `${opts.bloodDonors ? "\nBUSCAN DONANTES DE SANGRE — acércate si puedes donar" : ""}` +
+               `\nUbicación: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ", Venezuela")}` +
+               `\n\nMás info en ${SITE_URL}`
              ) + `</div>`;
     }
 
@@ -2379,7 +2412,8 @@
         if (slot.coords) {
           const layer = L.marker([slot.coords.lat, slot.coords.lng], { icon: makeHospitalIcon() })
             .bindPopup(buildHospitalPopup(slot.display, slot.count, { bloodDonors: !!slot.coords?.bloodDonors }));
-          const entry = { layer, isHospital: true, category: "hospital", hospitalName: slot.display };
+          const entry = { layer, isHospital: true, category: "hospital", hospitalName: slot.display,
+                          hospitalCount: slot.count, hospitalCoords: slot.coords || null };
           markers.push(entry);
           if (matchesFilter(entry, activeFilter)) layersToAdd.push(layer);
         } else {
@@ -2394,7 +2428,8 @@
         if (!coords) continue;
         const layer = L.marker([coords.lat, coords.lng], { icon: makeHospitalIcon() })
           .bindPopup(buildHospitalPopup(name, count));
-        const entry = { layer, isHospital: true, category: "hospital", hospitalName: name };
+        const entry = { layer, isHospital: true, category: "hospital", hospitalName: name,
+                        hospitalCount: count, hospitalCoords: null };
         markers.push(entry);
         if (matchesFilter(entry, activeFilter)) map.addLayer(layer);
         await new Promise(r => setTimeout(r, 1100));
