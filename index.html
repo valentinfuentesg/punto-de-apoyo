@@ -1797,16 +1797,14 @@
       terremotoHospLoaded = true;
       const list = await fetchTerremotoHospitals();
       if (!list.length) return;
-      // Construir un mapa de nombres ya presentes para no duplicar
-      const existingNames = new Set(
-        markers.filter(m => m.isHospital)
-               .map(m => (m.hospitalName || "").toLowerCase().replace(/\s+/g, " ").trim())
+      // Dedup por canonical key (cubre typos, mayúsculas, paréntesis, acentos)
+      const existingKeys = new Set(
+        markers.filter(m => m.isHospital).map(m => canonicalize(m.hospitalName).key)
       );
       const counts = {};
       for (const h of list) {
-        const key = h.name.toLowerCase().replace(/\s+/g, " ").trim();
-        if (existingNames.has(key)) continue;          // ya está en el mapa, no dupliques
-        counts[h.name] = (counts[h.name] || 0) + h.activePatients;
+        if (existingKeys.has(canonicalize(h.name).key)) continue;
+        counts[h.name] = (counts[h.name] || 0) + (h.activePatients || 0);
       }
       if (Object.keys(counts).length) {
         renderHospitalMarkers(counts);
@@ -1864,7 +1862,7 @@
       gid: "0",
       url: "https://docs.google.com/spreadsheets/d/1HuC8kWfurjlFH4W1nI34t67701QlRhiTyQAPTR6bKIc/edit?gid=0",
       cacheKey: "pa_hosp_counts_v2",        // v2 = invalidar caché anterior tras cambiar de fuente
-      geoCacheKey: "pa_hosp_geo_v1",
+      geoCacheKey: "pa_hosp_geo_v2",        // v2 = re-intentar Nominatim con queries mejoradas
       maxAgeMs: 15 * 60 * 1000,
     };
 
@@ -1874,13 +1872,18 @@
       { match: /universitario.*caracas|huc|clin[ií]cas.*caracas/i, name: "Hospital Universitario de Caracas (HUC)", lat: 10.4923, lng: -66.8908 },
       { match: /vargas.*caracas|jos[eé] mar[ií]a vargas/i,         name: "Hospital Vargas de Caracas",              lat: 10.5023, lng: -66.9136 },
       { match: /domingo luciani|el llanito/i,                       name: "Hospital Domingo Luciani (El Llanito)",   lat: 10.4836, lng: -66.8067 },
-      { match: /p[eé]rez de le[oó]n|petare/i,                       name: "Hospital Pérez de León (Petare)",         lat: 10.4951, lng: -66.7889 },
+      { match: /p[eé]rez de le[oó]n|p[eé]rez le[oó]n|petare/i,      name: "Hospital Pérez de León (Petare)",         lat: 10.4951, lng: -66.7889 },
       { match: /miguel p[eé]rez carre[nñ]o|caricuao|p[eé]rez carre[nñ]o/i, name: "Hospital Miguel Pérez Carreño",     lat: 10.4598, lng: -66.9716 },
       { match: /magallanes de catia/i,                              name: "Hospital de Catia (Magallanes)",          lat: 10.5142, lng: -66.9489 },
-      { match: /perif[eé]rico.*catia|catia.*perif[eé]rico/i,        name: "Hospital Periférico de Catia",            lat: 10.5197, lng: -66.9460 },
+      // Periférico de Catia tiene OTRO nombre: "Dr. Ricardo Baquero González". Cubrimos typo "Hopital".
+      { match: /perif[eé]rico.*catia|catia.*perif[eé]rico|baquero gonz[aá]lez|h[oó]pital.*baquero/i, name: "Hospital Periférico de Catia (Dr. Ricardo Baquero González)", lat: 10.5197, lng: -66.9460 },
       { match: /jos[eé] gregorio hern[aá]ndez|^jgh\b/i,             name: "Hospital Dr. José Gregorio Hernández (Catia)", lat: 10.5135, lng: -66.9445 },
       { match: /general del oeste/i,                                name: "Hospital General del Oeste (Los Magallanes)", lat: 10.5128, lng: -66.9408 },
       { match: /cruz roja/i,                                        name: "Cruz Roja Venezolana (Maripérez, Caracas)", lat: 10.5060, lng: -66.9055 },
+      { match: /pariata|rafael medina jim[eé]nez/i,                 name: "Hospital de Pariata (La Guaira)",         lat: 10.6033, lng: -66.9469 },
+      { match: /cl[ií]nica el [aá]vila/i,                           name: "Clínica El Ávila (Altamira, Caracas)",    lat: 10.4945, lng: -66.8505 },
+      { match: /maternidad concepci[oó]n palacios/i,                name: "Maternidad Concepción Palacios",          lat: 10.5083, lng: -66.9264 },
+      { match: /perif[eé]rico.*coche/i,                             name: "Hospital Periférico de Coche",            lat: 10.4607, lng: -66.9220 },
       { match: /j[\.\s]?m[\.\s]?de los r[ií]os|de los rios|nino jesus/i, name: "Hospital JM de los Ríos (pediátrico)", lat: 10.5018, lng: -66.8881 },
       { match: /centro m[eé]dico de caracas/i,                      name: "Centro Médico de Caracas",                lat: 10.4953, lng: -66.8754 },
       { match: /policl[ií]nica metropolitana/i,                     name: "Policlínica Metropolitana",               lat: 10.4905, lng: -66.8390 },
@@ -1916,23 +1919,36 @@
 
     async function geocodeHospital(name) {
       const cache = getHospGeoCache();
-      if (cache[name]) return cache[name];
-      // Nominatim: una query educada (1 req/seg, user-agent implícito por browser)
-      try {
-        const q = encodeURIComponent(name + " Venezuela");
-        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ve&q=${q}`;
-        const res = await fetch(url, { headers: { "Accept-Language": "es" } });
-        const data = await res.json();
-        if (!data || !data.length) { cache[name] = null; saveHospGeoCache(cache); return null; }
-        const lat = parseFloat(data[0].lat), lng = parseFloat(data[0].lon);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) { cache[name] = null; saveHospGeoCache(cache); return null; }
-        if (lat < -1 || lat > 17 || lng < -75 || lng > -58) { cache[name] = null; saveHospGeoCache(cache); return null; }
-        const out = { lat, lng, canonical: name };
-        cache[name] = out; saveHospGeoCache(cache);
-        return out;
-      } catch (e) {
-        return null;
+      if (Object.prototype.hasOwnProperty.call(cache, name)) return cache[name];
+
+      // Nombre limpio: sin paréntesis ni puntuación extra
+      const clean = name.replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+      // Múltiples queries para aumentar el hit-rate de Nominatim
+      const variants = [
+        clean + " Venezuela",
+        clean + " Caracas Venezuela",
+        clean,
+      ];
+
+      for (let i = 0; i < variants.length; i++) {
+        try {
+          const q = encodeURIComponent(variants[i]);
+          const url = `https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=ve&q=${q}`;
+          const res = await fetch(url, { headers: { "Accept-Language": "es" } });
+          const data = await res.json();
+          for (const r of (data || [])) {
+            const lat = parseFloat(r.lat), lng = parseFloat(r.lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+            if (lat < -1 || lat > 17 || lng < -75 || lng > -58) continue;
+            const out = { lat, lng, canonical: name };
+            cache[name] = out; saveHospGeoCache(cache);
+            return out;
+          }
+          if (i < variants.length - 1) await new Promise(r => setTimeout(r, 1100));
+        } catch {}
       }
+      cache[name] = null; saveHospGeoCache(cache);
+      return null;
     }
 
     function makeHospitalIcon() {
@@ -1954,27 +1970,55 @@
              `<div>${gmapsLink(0, 0).replace(/destination=0,0/, `destination=${encodeURIComponent(name + ', Venezuela')}`)}</div>`;
     }
 
-    // Render pins de hospitales en el mapa (no bloquea — geocodificación es async)
-    async function renderHospitalMarkers(counts) {
-      const entries = Object.entries(counts);
-      // Primero: dibujar los que tienen coords conocidas (instantáneo)
+    // Normaliza para deduplicar: minúsculas, sin acentos, sin paréntesis, sin puntuación
+    function normalizeHospName(s) {
+      return String(s || "")
+        .toLowerCase()
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .replace(/\([^)]*\)/g, " ")
+        .replace(/[^a-z0-9 ]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+    // Devuelve la "identidad canónica" de un hospital: si está en el dict, usa el
+    // nombre oficial; si no, usa el nombre normalizado. Así las variantes del
+    // mismo lugar (typos, abreviaciones, mayúsculas) terminan en un solo pin.
+    function canonicalize(name) {
+      const c = findHospitalCoords(name);
+      if (c) return { key: "dict:" + c.canonical, display: c.canonical, coords: c };
+      return { key: "norm:" + normalizeHospName(name), display: String(name || "").trim(), coords: null };
+    }
+
+    // Render pins agregando por canonical key (no bloquea — geocoding es async)
+    async function renderHospitalMarkers(rawCounts) {
+      // 1) Agregar por canonical → suma counts de variantes del mismo hospital
+      const agg = {}; // key -> { display, coords, count }
+      for (const [name, count] of Object.entries(rawCounts)) {
+        const c = canonicalize(name);
+        if (agg[c.key]) {
+          agg[c.key].count += count;
+        } else {
+          agg[c.key] = { display: c.display, coords: c.coords, count };
+        }
+      }
+
+      // 2) Dibujar los que tienen coords del dict (instantáneo)
       const layersToAdd = [];
-      const pending = []; // los que requieren Nominatim
-      for (const [name, count] of entries) {
-        const coords = findHospitalCoords(name);
-        if (coords) {
-          const layer = L.marker([coords.lat, coords.lng], { icon: makeHospitalIcon() })
-            .bindPopup(buildHospitalPopup(name, count));
-          const entry = { layer, isHospital: true, category: "hospital", hospitalName: name };
+      const pending = [];
+      for (const slot of Object.values(agg)) {
+        if (slot.coords) {
+          const layer = L.marker([slot.coords.lat, slot.coords.lng], { icon: makeHospitalIcon() })
+            .bindPopup(buildHospitalPopup(slot.display, slot.count));
+          const entry = { layer, isHospital: true, category: "hospital", hospitalName: slot.display };
           markers.push(entry);
           if (matchesFilter(entry, activeFilter)) layersToAdd.push(layer);
         } else {
-          pending.push([name, count]);
+          pending.push([slot.display, slot.count]);
         }
       }
       layersToAdd.forEach(l => map.addLayer(l));
 
-      // Segundo: geocodificar los desconocidos en serie (Nominatim = 1 req/seg)
+      // 3) Geocodificar los desconocidos con Nominatim (1 req/seg, con variantes)
       for (const [name, count] of pending) {
         const coords = await geocodeHospital(name);
         if (!coords) continue;
@@ -1983,7 +2027,7 @@
         const entry = { layer, isHospital: true, category: "hospital", hospitalName: name };
         markers.push(entry);
         if (matchesFilter(entry, activeFilter)) map.addLayer(layer);
-        await new Promise(r => setTimeout(r, 1100)); // respeta rate limit
+        await new Promise(r => setTimeout(r, 1100));
       }
     }
 
