@@ -48,6 +48,12 @@
   <!-- Centros de acopio (datos estáticos) -->
   <script src="centros.js"></script>
 
+  <!-- Vercel Analytics (privacy-friendly, sin cookies) -->
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+
   <style>
     :root {
       --bg: #000000;
@@ -631,6 +637,10 @@
       <svg viewBox="0 0 24 24" fill="#eab308" stroke="#713f12" stroke-width="1"><path d="M12 2L1 22h22L12 2z"/><rect x="11" y="9" width="2" height="6" fill="#713f12"/><circle cx="12" cy="18" r="1" fill="#713f12"/></svg>
       Peligro
     </div>
+    <div class="chip" data-filter="movilidad">
+      <svg viewBox="0 0 24 24" fill="#7c3aed" stroke="#4c1d95" stroke-width="1"><path d="M5 11l1.7-4.7a2 2 0 0 1 1.9-1.3h8.8a2 2 0 0 1 1.9 1.3L21 11v6a1 1 0 0 1-1 1h-1.5a2 2 0 1 1-4 0h-5a2 2 0 1 1-4 0H4a1 1 0 0 1-1-1v-6h2z"/></svg>
+      Movilidad
+    </div>
   </div>
 
   <button id="infoBtn" class="info-btn" title="Información y emergencias" aria-label="Información y emergencias">
@@ -662,7 +672,7 @@
           <div id="hospList" class="hosp-list">
             <div class="hosp-loading">Cargando…</div>
           </div>
-          <a class="hosp-link" href="https://docs.google.com/spreadsheets/d/10ya5qKRNpLvGD7DIGTy5XFLCJesLWs-Z/edit?gid=1250582405" target="_blank" rel="noopener noreferrer">
+          <a class="hosp-link" href="https://docs.google.com/spreadsheets/d/1HuC8kWfurjlFH4W1nI34t67701QlRhiTyQAPTR6bKIc/edit?gid=0" target="_blank" rel="noopener noreferrer">
             🔍 Buscar familiar (lista completa)
           </a>
         </section>
@@ -760,6 +770,7 @@
             <li>Generamos una <strong>huella anónima local</strong> (UUID en tu navegador) para evitar spam. No es tu IP ni tu identidad.</li>
             <li><strong>No compartimos datos con terceros.</strong> Los reportes son públicos por naturaleza (cualquiera los ve en el mapa).</li>
             <li>Los reportes ciudadanos <strong>se borran automáticamente a los 7 días</strong>.</li>
+            <li>Usamos <strong>Vercel Analytics</strong> (sin cookies, sin huellas, sin IPs identificables) solo para contar visitas agregadas y entender qué tan útil es el sitio. No rastrea individuos.</li>
           </ul>
         </section>
 
@@ -832,6 +843,7 @@
         <button class="cat-btn" data-cat="suministros"> <span class="emoji">💧</span> Suministros (agua, comida)</button>
         <button class="cat-btn" data-cat="asistencia">  <span class="emoji">⚕️</span> Asistencia médica</button>
         <button class="cat-btn" data-cat="peligro">     <span class="emoji">🚫</span> Peligro / Vía trancada</button>
+        <button class="cat-btn" data-cat="movilidad">   <span class="emoji">🚗</span> Movilidad / Transporte</button>
       </div>
       <textarea id="noteInput" placeholder="Nota opcional (ej: hora, contacto, detalles)…"
         maxlength="280" rows="2"
@@ -898,6 +910,7 @@
       suministros: '<svg viewBox="0 0 24 24" width="20" height="20" fill="#0284c7" stroke="#0c4a6e" stroke-width="1"><path d="M12 2.5s7 7.5 7 12.5a7 7 0 1 1-14 0c0-5 7-12.5 7-12.5z"/></svg>',
       asistencia:  '<svg viewBox="0 0 24 24" width="20" height="20" fill="#dc2626" stroke="#7f1d1d" stroke-width="1"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/></svg>',
       peligro:     '<svg viewBox="0 0 24 24" width="20" height="20" fill="#eab308" stroke="#713f12" stroke-width="1"><path d="M12 2L1 22h22L12 2z"/><rect x="11" y="9" width="2" height="6" fill="#713f12"/><circle cx="12" cy="18" r="1" fill="#713f12"/></svg>',
+      movilidad:   '<svg viewBox="0 0 24 24" width="20" height="20" fill="#7c3aed" stroke="#4c1d95" stroke-width="1"><path d="M5 11l1.7-4.7a2 2 0 0 1 1.9-1.3h8.8a2 2 0 0 1 1.9 1.3L21 11v6a1 1 0 0 1-1 1h-1.5a2 2 0 1 1-4 0h-5a2 2 0 1 1-4 0H4a1 1 0 0 1-1-1v-6h2z"/></svg>',
       centro:      '<svg viewBox="0 0 24 24" width="20" height="20" fill="#0ea5e9" stroke="#0c4a6e" stroke-width="1"><path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/></svg>',
       hospital:    '<svg viewBox="0 0 24 24" width="20" height="20" fill="#dc2626" stroke="#7f1d1d" stroke-width="1"><rect x="3" y="6" width="18" height="14" rx="1"/><path d="M11 9h2v3h3v2h-3v3h-2v-3H8v-2h3z" fill="#fff"/><path d="M9 6V3h6v3" stroke="#7f1d1d" stroke-width="1" fill="none"/></svg>',
     };
@@ -908,6 +921,7 @@
       suministros: { emoji: "💧",  label: "Suministros",      svg: SVG_ICONS.suministros },
       asistencia:  { emoji: "⚕️", label: "Asistencia médica", svg: SVG_ICONS.asistencia },
       peligro:     { emoji: "🚫",  label: "Peligro",          svg: SVG_ICONS.peligro },
+      movilidad:   { emoji: "🚗",  label: "Movilidad / Transporte", svg: SVG_ICONS.movilidad },
     };
 
     // ============================================================
@@ -1847,10 +1861,10 @@
     // (PII completa va al sheet original vía link)
     // ============================================================
     const SHEET_HOSP = {
-      id:  "10ya5qKRNpLvGD7DIGTy5XFLCJesLWs-Z",
-      gid: "1250582405",
-      url: "https://docs.google.com/spreadsheets/d/10ya5qKRNpLvGD7DIGTy5XFLCJesLWs-Z/edit?gid=1250582405",
-      cacheKey: "pa_hosp_counts_v1",
+      id:  "1HuC8kWfurjlFH4W1nI34t67701QlRhiTyQAPTR6bKIc",
+      gid: "0",
+      url: "https://docs.google.com/spreadsheets/d/1HuC8kWfurjlFH4W1nI34t67701QlRhiTyQAPTR6bKIc/edit?gid=0",
+      cacheKey: "pa_hosp_counts_v2",        // v2 = invalidar caché anterior tras cambiar de fuente
       geoCacheKey: "pa_hosp_geo_v1",
       maxAgeMs: 15 * 60 * 1000,
     };
@@ -1862,8 +1876,12 @@
       { match: /vargas.*caracas|jos[eé] mar[ií]a vargas/i,         name: "Hospital Vargas de Caracas",              lat: 10.5023, lng: -66.9136 },
       { match: /domingo luciani|el llanito/i,                       name: "Hospital Domingo Luciani (El Llanito)",   lat: 10.4836, lng: -66.8067 },
       { match: /p[eé]rez de le[oó]n|petare/i,                       name: "Hospital Pérez de León (Petare)",         lat: 10.4951, lng: -66.7889 },
-      { match: /miguel p[eé]rez carre[nñ]o|caricuao/i,              name: "Hospital Miguel Pérez Carreño",           lat: 10.4598, lng: -66.9716 },
+      { match: /miguel p[eé]rez carre[nñ]o|caricuao|p[eé]rez carre[nñ]o/i, name: "Hospital Miguel Pérez Carreño",     lat: 10.4598, lng: -66.9716 },
       { match: /magallanes de catia/i,                              name: "Hospital de Catia (Magallanes)",          lat: 10.5142, lng: -66.9489 },
+      { match: /perif[eé]rico.*catia|catia.*perif[eé]rico/i,        name: "Hospital Periférico de Catia",            lat: 10.5197, lng: -66.9460 },
+      { match: /jos[eé] gregorio hern[aá]ndez|^jgh\b/i,             name: "Hospital Dr. José Gregorio Hernández (Catia)", lat: 10.5135, lng: -66.9445 },
+      { match: /general del oeste/i,                                name: "Hospital General del Oeste (Los Magallanes)", lat: 10.5128, lng: -66.9408 },
+      { match: /cruz roja/i,                                        name: "Cruz Roja Venezolana (Maripérez, Caracas)", lat: 10.5060, lng: -66.9055 },
       { match: /j[\.\s]?m[\.\s]?de los r[ií]os|de los rios|nino jesus/i, name: "Hospital JM de los Ríos (pediátrico)", lat: 10.5018, lng: -66.8881 },
       { match: /centro m[eé]dico de caracas/i,                      name: "Centro Médico de Caracas",                lat: 10.4953, lng: -66.8754 },
       { match: /policl[ií]nica metropolitana/i,                     name: "Policlínica Metropolitana",               lat: 10.4905, lng: -66.8390 },
