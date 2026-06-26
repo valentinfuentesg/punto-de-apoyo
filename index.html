@@ -18,7 +18,7 @@
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
     img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org;
     font-src 'self' data:;
-    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com;
+    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com https://localizadosvenezuela.com;
     manifest-src 'self';
     upgrade-insecure-requests;
   " />
@@ -100,6 +100,22 @@
     .header p  {
       margin: 3px 0 0; font-size: 11px; color: #e5e7eb;
       text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+    }
+    .hero-stats {
+      display: inline-flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+      font-size: 11px; font-weight: 600; color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+      pointer-events: none;
+    }
+    .hero-stats span {
+      background: rgba(0,0,0,0.55); padding: 3px 9px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .hero-stats:empty { display: none; }
+
+    /* Chip toggleable verde (para "Cerca de mí") */
+    .chip.toggle.active {
+      background: #16a34a; border-color: #16a34a; color: #fff;
     }
 
     /* Buscador (Nominatim) */
@@ -603,6 +619,7 @@
   <div class="header">
     <h1>🇻🇪 Punto de Apoyo</h1>
     <p>Mapa de emergencia · Centros de acopio · Reportes ciudadanos</p>
+    <div id="heroStats" class="hero-stats" aria-live="polite"></div>
   </div>
 
   <div class="search-wrap" style="position:absolute;">
@@ -619,6 +636,10 @@
 
   <div id="filters" class="filters">
     <div class="chip active" data-filter="all">Todos</div>
+    <div id="nearbyChip" class="chip toggle" data-toggle="nearby" title="Mostrar solo a 5 km o menos de tu ubicación">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s-7-7.5-7-13a7 7 0 1 1 14 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5" fill="#16a34a"/></svg>
+      Cerca de mí (5 km)
+    </div>
     <div class="chip" data-filter="centros">
       <svg viewBox="0 0 24 24" fill="#0ea5e9" stroke="#0c4a6e" stroke-width="1"><path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/></svg>
       Centros de acopio
@@ -823,7 +844,10 @@
             Datos: OpenStreetMap · Carto · listados públicos de centros de acopio.<br>
             Centros y reportes adicionales vía
             <a href="https://caracasayuda.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">caracasayuda.com</a>
-            (iniciativa de Caracas Merch).
+            (Caracas Merch).<br>
+            Hospitales y conteos vía
+            <a href="https://localizadosvenezuela.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">localizadosvenezuela.com</a>
+            (Giuseppe Gangi, MIT).
           </p>
         </section>
       </div>
@@ -1108,6 +1132,20 @@
                text-decoration:none;font-size:12px;">${label}</a>`;
     }
 
+    // Botón de compartir por WhatsApp con texto pre-armado
+    function waShareButton(text) {
+      const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer"
+        style="display:inline-block;background:#25d366;color:#fff;padding:6px 12px;
+               border-radius:6px;margin-top:6px;margin-left:6px;font-weight:600;
+               text-decoration:none;font-size:12px;">💬 WhatsApp</a>`;
+    }
+
+    function gmapsUrl(lat, lng) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    }
+    const SITE_URL = "https://punto-de-apoyo.vercel.app";
+
     function confirmRow(reportId, count) {
       const already = isConfirmedLocal(reportId);
       const n = Number(count) || 0;
@@ -1136,7 +1174,8 @@
           <p style="font-size:11px;color:#9ca3af;margin:0 0 6px;">
             Requiere ${FULFILL_THRESHOLD} confirmaciones distintas para retirar del mapa. ${progress}
           </p>
-          <textarea class="ff-note" maxlength="280" rows="2" placeholder="¿Qué entregaron / quién atendió? (opcional)"></textarea>
+          <textarea class="ff-note" maxlength="280" minlength="5" rows="2" required
+            placeholder="Describe qué entregaron / quién atendió (mínimo 5 caracteres)"></textarea>
           <div class="ff-actions">
             <button class="ff-cancel" type="button">Cancelar</button>
             <button class="ff-confirm" type="button">Confirmar atendida</button>
@@ -1153,12 +1192,13 @@
       const type = r.report_type || "offer";
       const tl = typeLabel(type);
       const note = r.note ? `<br><span style="color:#fff">${escapeHtml(r.note)}</span>` : "";
+      const waText = `${cat.emoji} ${tl.txt}: ${cat.label}\n${r.note ? r.note + "\n" : ""}📍 ${gmapsUrl(r.lat, r.lng)}\n\nVía ${SITE_URL}`;
       const layer = L.marker([r.lat, r.lng], { icon: makeIcon(r.category, type) })
         .bindPopup(
           `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
           `<b>${cat.emoji} ${cat.label}</b>${note}<br>` +
           `<small>${timeAgo(r.created_at)}</small><br>` +
-          gmapsLink(r.lat, r.lng) +
+          gmapsLink(r.lat, r.lng) + waShareButton(waText) +
           confirmRow(r.id, r.confirmations) +
           (type === "request" ? fulfillRow(r.id, r.fulfill_count) : "")
         );
@@ -1172,7 +1212,22 @@
         ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
     }
 
-    function matchesFilter(m, f) {
+    // "Cerca de mí" — toggle adicional que se combina con AND con el filtro de categoría
+    let nearbyOnly = false;
+    const NEARBY_RADIUS_M = 5000;
+    function distanceMeters(lat1, lng1, lat2, lng2) {
+      const dLat = (lat1 - lat2) * 111000;
+      const dLng = (lng1 - lng2) * 111000 * Math.cos(((lat1 + lat2) / 2) * Math.PI / 180);
+      return Math.sqrt(dLat * dLat + dLng * dLng);
+    }
+    function isNearUser(m) {
+      if (!userMarker) return true; // sin ubicación → no filtrar por distancia
+      const u = userMarker.getLatLng();
+      const ll = m.layer.getLatLng();
+      return distanceMeters(u.lat, u.lng, ll.lat, ll.lng) <= NEARBY_RADIUS_M;
+    }
+
+    function matchesCategoryFilter(m, f) {
       if (f === "all") return true;
       if (f === "centros")    return m.isCentro === true;
       if (f === "hospitales") return m.isHospital === true;
@@ -1180,22 +1235,71 @@
       if (f.startsWith("type:")) return m.report_type === f.slice(5);
       return m.category === f;
     }
+    function matchesFilter(m, f) {
+      if (!matchesCategoryFilter(m, f)) return false;
+      if (nearbyOnly && !isNearUser(m)) return false;
+      return true;
+    }
 
-    function applyFilter(f) {
-      activeFilter = f;
-      document.querySelectorAll(".chip").forEach(c =>
-        c.classList.toggle("active", c.dataset.filter === f)
-      );
+    // ============================================================
+    // HERO STATS — recuento de recursos disponibles arriba del mapa
+    // ============================================================
+    function updateHeroStats() {
+      const el = $("heroStats");
+      if (!el) return;
+      let centros = 0, hospitales = 0, ofertas = 0, solicitudes = 0;
+      for (const m of markers) {
+        if (m.isCentro)        centros++;
+        else if (m.isHospital) hospitales++;
+        else if (m.report_type === "offer")   ofertas++;
+        else if (m.report_type === "request") solicitudes++;
+      }
+      if (!markers.length) { el.innerHTML = ""; return; }
+      const parts = [];
+      if (centros)     parts.push(`<span>📦 ${centros} centros</span>`);
+      if (hospitales)  parts.push(`<span>🏥 ${hospitales} hospitales</span>`);
+      if (ofertas)     parts.push(`<span>🟢 ${ofertas} ofertas</span>`);
+      if (solicitudes) parts.push(`<span>🟠 ${solicitudes} solicitudes</span>`);
+      el.innerHTML = parts.join("");
+    }
+    // Refrescar cada 2.5s durante el ciclo de carga (los loaders pueblan en async)
+    setInterval(updateHeroStats, 2500);
+
+    function repaintFilters() {
       markers.forEach(m => {
-        const should = matchesFilter(m, f);
+        const should = matchesFilter(m, activeFilter);
         const hasIt  = map.hasLayer(m.layer);
         if (should && !hasIt) map.addLayer(m.layer);
         if (!should && hasIt) map.removeLayer(m.layer);
       });
+      updateHeroStats();
     }
-    document.querySelectorAll(".chip").forEach(c =>
+    function applyFilter(f) {
+      activeFilter = f;
+      document.querySelectorAll(".chip[data-filter]").forEach(c =>
+        c.classList.toggle("active", c.dataset.filter === f)
+      );
+      repaintFilters();
+    }
+    function applyNearby(on) {
+      nearbyOnly = !!on;
+      const chip = $("nearbyChip");
+      if (chip) chip.classList.toggle("active", nearbyOnly);
+      repaintFilters();
+    }
+
+    // Category chips (single-select)
+    document.querySelectorAll(".chip[data-filter]").forEach(c =>
       c.addEventListener("click", () => applyFilter(c.dataset.filter))
     );
+    // Toggle "Cerca de mí"
+    document.querySelector(".chip[data-toggle='nearby']")?.addEventListener("click", () => {
+      if (!userMarker && !nearbyOnly) {
+        showStatus("Activa tu ubicación con el botón 📍 primero", "err", 3500);
+        return;
+      }
+      applyNearby(!nearbyOnly);
+    });
 
     // Tabs de tipo (Ofrezco / Necesito) dentro del modal
     function setType(t) {
@@ -1508,12 +1612,13 @@
       const acepta   = c.acepta   ? `<div class="popup-acepta"><b>Aceptan:</b> ${escapeHtml(c.acepta)}</div>` : "";
       const contacto = c.contacto ? `<div class="popup-contacto"><b>Contacto:</b> ${renderContacto(c.contacto)}</div>` : "";
       const ciudad   = c.ciudad   ? `<div style="color:#9ca3af;font-size:11px;margin-top:4px;">📍 ${escapeHtml(c.ciudad)}</div>` : "";
+      const waText   = `📦 Centro de acopio: ${c.org}\n${c.addr}\n${c.acepta ? "Aceptan: " + c.acepta + "\n" : ""}📍 ${gmapsUrl(c.lat, c.lng)}\n\nVía ${SITE_URL}`;
       layer.bindPopup(
         `<span class="popup-badge" style="background:#075985;color:#bae6fd;">📦 Centro de acopio</span><br>` +
         `<div class="popup-org">${escapeHtml(c.org)}</div>` +
         `<div class="popup-addr">${escapeHtml(c.addr)}</div>` +
         acepta + contacto + ciudad +
-        `<div>${gmapsLink(c.lat, c.lng)}</div>`
+        `<div>${gmapsLink(c.lat, c.lng)}${waShareButton(waText)}</div>`
       );
       return layer;
     }
@@ -1766,7 +1871,18 @@
       const id  = row?.dataset?.id;
       if (!id || !sb) return;
 
-      const note = (row.querySelector(".ff-note")?.value || "").trim().slice(0, 280) || null;
+      const noteEl = row.querySelector(".ff-note");
+      const note   = (noteEl?.value || "").trim().slice(0, 280);
+      // Nota OBLIGATORIA (mínimo 5 caracteres) para evitar votos vacíos
+      if (note.length < 5) {
+        if (noteEl) {
+          noteEl.style.borderColor = "#dc2626";
+          noteEl.focus();
+        }
+        showStatus("Describe brevemente cómo fue atendida (mínimo 5 caracteres)", "err", 3500);
+        return;
+      }
+      if (noteEl) noteEl.style.borderColor = "";
       conf.disabled = true; conf.textContent = "…";
 
       const { data, error } = await sb.rpc("fulfill_report", { p_report: id, p_fp: CLIENT_FP, p_note: note });
@@ -1854,6 +1970,46 @@
     // setTimeout(loadTerremotoHospitals, 1800);
 
     // ============================================================
+    // LOCALIZADOSVENEZUELA.COM — API pública con CORS abierto (MIT license).
+    // Reemplaza el fetch muerto de terremoto. Da hospitales + recuento de
+    // pacientes "localizados" (encontrados en el hospital). Atribución en
+    // el footer del info modal.
+    // ============================================================
+    let localizadosLoaded = false;
+    async function loadLocalizadosHospitals() {
+      if (localizadosLoaded) return;
+      localizadosLoaded = true;
+      try {
+        const res = await fetch("https://localizadosvenezuela.com/api/v1/lugares", { mode: "cors" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const json = await res.json();
+        const lugares = Array.isArray(json?.data) ? json.data : [];
+        if (!lugares.length) return;
+
+        // Filtrar: solo hospitales con >0 localizados; el resto son ruido
+        const existingKeys = new Set(
+          markers.filter(m => m.isHospital).map(m => canonicalize(m.hospitalName).key)
+        );
+        const counts = {};
+        for (const l of lugares) {
+          if (!l || !l.nombre) continue;
+          if (l.tipo !== "hospital" && l.tipo !== "recinto") continue;
+          const n = Number(l.totalLocalizados) || 0;
+          if (n < 1) continue;
+          if (existingKeys.has(canonicalize(l.nombre).key)) continue;
+          counts[l.nombre] = (counts[l.nombre] || 0) + n;
+        }
+        if (Object.keys(counts).length) {
+          renderHospitalMarkers(counts);
+          showStatus(`+${Object.keys(counts).length} hospitales adicionales cargados`, "ok", 2500);
+        }
+      } catch (e) {
+        console.warn("localizadosvenezuela fetch:", e.message);
+      }
+    }
+    setTimeout(loadLocalizadosHospitals, 2000);
+
+    // ============================================================
     // CARACASAYUDA.COM — merge de su tabla pública `puntos` (Supabase REST).
     // Su anon key publishable está pública en su HTML; misma exposición que la
     // nuestra. Solo LECTURA. Atribución visible en el info modal.
@@ -1921,11 +2077,12 @@
       const horario = p.horario     ? `<div class="popup-acepta"><b>Horario:</b> ${escapeHtml(p.horario)}</div>` : "";
       const tel     = p.telefono    ? `<div class="popup-contacto"><b>Tel:</b> ${renderContacto(p.telefono)}</div>` : "";
       const dir     = p.direccion   ? `<div class="popup-addr">${escapeHtml(p.direccion)}</div>` : "";
+      const waText = `📦 Centro de acopio: ${p.nombre || ""}\n${p.direccion || ""}\n${p.descripcion ? p.descripcion + "\n" : ""}📍 ${gmapsUrl(p.lat, p.lng)}\n\nVía ${SITE_URL}`;
       const layer = L.marker([p.lat, p.lng], { icon: makeCentroIcon() }).bindPopup(
         `<span class="popup-badge" style="background:#075985;color:#bae6fd;">📦 Centro de acopio</span><br>` +
         `<div class="popup-org">${escapeHtml(p.nombre || "Centro de acopio")}</div>` +
         dir + desc + horario + tel +
-        `<div>${gmapsLink(p.lat, p.lng)}</div>` + CA_BADGE
+        `<div>${gmapsLink(p.lat, p.lng)}${waShareButton(waText)}</div>` + CA_BADGE
       );
       return layer;
     }
@@ -1938,6 +2095,7 @@
       const dir    = p.direccion ? `<div style="color:#cbd5e1;font-size:12px;">${escapeHtml(p.direccion)}</div>` : "";
       const tel    = p.telefono  ? `<div style="font-size:12px;"><b>Tel:</b> ${renderContacto(p.telefono)}</div>` : "";
       const horario= p.horario   ? `<div style="font-size:12px;"><b>Horario:</b> ${escapeHtml(p.horario)}</div>` : "";
+      const waText = `${cat.emoji} ${tl.txt}: ${cat.label}\n${p.nombre || ""}\n${p.direccion || ""}\n${extras ? extras + "\n" : ""}📍 ${gmapsUrl(p.lat, p.lng)}\n\nVía ${SITE_URL}`;
       const layer = L.marker([p.lat, p.lng], { icon: makeIcon(mappedCategory, type) }).bindPopup(
         `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
         `<b>${cat.emoji} ${cat.label}</b><br>` +
@@ -1945,7 +2103,7 @@
         dir +
         (extras ? `<div style="color:#cbd5e1;font-size:12px;margin-top:4px;">${escapeHtml(extras)}</div>` : "") +
         tel + horario +
-        `<div>${gmapsLink(p.lat, p.lng)}</div>` + CA_BADGE
+        `<div>${gmapsLink(p.lat, p.lng)}${waShareButton(waText)}</div>` + CA_BADGE
       );
       return layer;
     }
@@ -2005,7 +2163,7 @@
         }
       }
       if (addedC + addedR > 0) {
-        showStatus(`+${addedC} centros y ${addedR} reportes vía caracasayuda.com`, "ok", 3000);
+        showStatus(`+${addedC} centros y ${addedR} reportes cargados`, "ok", 3000);
       }
     }
     // Disparar 2.5s después del init (después de centros y antes de Nominatim del resto)
@@ -2066,11 +2224,11 @@
     // Coordenadas conocidas de hospitales venezolanos (defensa contra Nominatim caído / rate-limit).
     // Match por substring case-insensitive del nombre del sheet.
     const HOSPITAL_COORDS = [
-      { match: /universitario.*caracas|huc|clin[ií]cas.*caracas/i, name: "Hospital Universitario de Caracas (HUC)", lat: 10.4923, lng: -66.8908 },
-      { match: /vargas.*caracas|jos[eé] mar[ií]a vargas/i,         name: "Hospital Vargas de Caracas",              lat: 10.5023, lng: -66.9136 },
-      { match: /domingo luciani|el llanito/i,                       name: "Hospital Domingo Luciani (El Llanito)",   lat: 10.4836, lng: -66.8067 },
+      { match: /universitario.*caracas|huc|clin[ií]cas.*caracas/i, name: "Hospital Universitario de Caracas (HUC)", lat: 10.4923, lng: -66.8908, bloodDonors: true },
+      { match: /vargas.*caracas|jos[eé] mar[ií]a vargas/i,         name: "Hospital Vargas de Caracas",              lat: 10.5023, lng: -66.9136, bloodDonors: true },
+      { match: /domingo luciani|el llanito/i,                       name: "Hospital Domingo Luciani (El Llanito)",   lat: 10.4836, lng: -66.8067, bloodDonors: true },
       { match: /p[eé]rez de le[oó]n|p[eé]rez le[oó]n|petare/i,      name: "Hospital Pérez de León (Petare)",         lat: 10.4951, lng: -66.7889 },
-      { match: /miguel p[eé]rez carre[nñ]o|caricuao|p[eé]rez carre[nñ]o/i, name: "Hospital Miguel Pérez Carreño",     lat: 10.4598, lng: -66.9716 },
+      { match: /miguel p[eé]rez carre[nñ]o|caricuao|p[eé]rez carre[nñ]o/i, name: "Hospital Miguel Pérez Carreño",     lat: 10.4598, lng: -66.9716, bloodDonors: true },
       { match: /magallanes de catia/i,                              name: "Hospital de Catia (Magallanes)",          lat: 10.5142, lng: -66.9489 },
       // Periférico de Catia tiene OTRO nombre: "Dr. Ricardo Baquero González". Cubrimos typo "Hopital".
       { match: /perif[eé]rico.*catia|catia.*perif[eé]rico|baquero gonz[aá]lez|h[oó]pital.*baquero/i, name: "Hospital Periférico de Catia (Dr. Ricardo Baquero González)", lat: 10.5197, lng: -66.9460 },
@@ -2101,7 +2259,9 @@
     function findHospitalCoords(rawName) {
       if (!rawName) return null;
       for (const h of HOSPITAL_COORDS) {
-        if (h.match.test(rawName)) return { lat: h.lat, lng: h.lng, canonical: h.name };
+        if (h.match.test(rawName)) return {
+          lat: h.lat, lng: h.lng, canonical: h.name, bloodDonors: !!h.bloodDonors,
+        };
       }
       return null;
     }
@@ -2155,16 +2315,29 @@
       });
     }
 
-    function buildHospitalPopup(name, count) {
+    function buildHospitalPopup(name, count, opts = {}) {
+      const bloodBadge = opts.bloodDonors
+        ? `<div style="margin:6px 0;padding:8px 10px;background:#7f1d1d;color:#fee2e2;
+             border-left:4px solid #ef4444;border-radius:4px;font-weight:700;font-size:12px;">
+             🩸 BUSCAN DONANTES DE SANGRE — acércate si puedes donar
+           </div>`
+        : "";
       return `<span class="popup-badge" style="background:#7f1d1d;color:#fee2e2;">🏥 Hospital</span><br>` +
              `<div class="popup-org" style="color:#fca5a5;">${escapeHtml(name)}</div>` +
+             bloodBadge +
              `<div class="popup-acepta"><strong>${count}</strong> ${count === 1 ? "paciente registrado" : "pacientes registrados"} en este hospital.</div>` +
              `<div style="margin-top:6px;">` +
              `<a href="${SHEET_HOSP.url}" target="_blank" rel="noopener noreferrer" ` +
              `style="display:inline-block;background:#7f1d1d;color:#fee2e2;padding:8px 12px;` +
              `border-radius:6px;font-weight:700;font-size:12px;text-decoration:none;">` +
              `🔍 Buscar familiar (lista completa)</a></div>` +
-             `<div>${gmapsLink(0, 0).replace(/destination=0,0/, `destination=${encodeURIComponent(name + ', Venezuela')}`)}</div>`;
+             `<div>${gmapsLink(0, 0).replace(/destination=0,0/, `destination=${encodeURIComponent(name + ', Venezuela')}`)}` +
+             waShareButton(
+               `🏥 ${name}\n${count} ${count === 1 ? "paciente registrado" : "pacientes registrados"}` +
+               `${opts.bloodDonors ? "\n🩸 BUSCAN DONANTES DE SANGRE" : ""}` +
+               `\n📍 https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ", Venezuela")}` +
+               `\n\nVía ${SITE_URL}`
+             ) + `</div>`;
     }
 
     // Normaliza para deduplicar: minúsculas, sin acentos, sin paréntesis, sin puntuación
@@ -2205,7 +2378,7 @@
       for (const slot of Object.values(agg)) {
         if (slot.coords) {
           const layer = L.marker([slot.coords.lat, slot.coords.lng], { icon: makeHospitalIcon() })
-            .bindPopup(buildHospitalPopup(slot.display, slot.count));
+            .bindPopup(buildHospitalPopup(slot.display, slot.count, { bloodDonors: !!slot.coords?.bloodDonors }));
           const entry = { layer, isHospital: true, category: "hospital", hospitalName: slot.display };
           markers.push(entry);
           if (matchesFilter(entry, activeFilter)) layersToAdd.push(layer);
