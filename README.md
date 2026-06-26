@@ -2,7 +2,7 @@
 
 > Mapa colaborativo de emergencia para Venezuela tras el sismo de 2026. Iniciativa ciudadana, sin fines de lucro.
 
-🌐 **Producción**: https://punto-de-apoyo.vercel.app
+🌐 **Producción**: [puntodeapoyovenezuela.com](https://www.puntodeapoyovenezuela.com/)
 📨 **Contacto**: [@vxlentinF](https://twitter.com/vxlentinF)
 
 ---
