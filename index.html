@@ -770,7 +770,6 @@
             <li>Generamos una <strong>huella anónima local</strong> (UUID en tu navegador) para evitar spam. No es tu IP ni tu identidad.</li>
             <li><strong>No compartimos datos con terceros.</strong> Los reportes son públicos por naturaleza (cualquiera los ve en el mapa).</li>
             <li>Los reportes ciudadanos <strong>se borran automáticamente a los 7 días</strong>.</li>
-            <li>Usamos <strong>Vercel Analytics</strong> (sin cookies, sin huellas, sin IPs identificables) solo para contar visitas agregadas y entender qué tan útil es el sitio. No rastrea individuos.</li>
           </ul>
         </section>
 
@@ -2027,18 +2026,29 @@
         const txt = await res.text();
         const rows = parseCSV(txt);
 
-        // Buscar fila de header (contiene "HOSPITAL")
-        let headerIdx = -1, hospCol = -1;
-        for (let i = 0; i < Math.min(rows.length, 10); i++) {
+        // Detectar layout — soporta dos formatos:
+        //  (A) Sheet con header limpio: alguna celda == "HOSPITAL" → data empieza en la siguiente fila
+        //  (B) Sheet sin header limpio (banner multi-línea como una sola celda):
+        //      la primera fila cuya col 0 empiece con "HOSPITAL " o "Clínica" es ya data
+        let hospCol = -1, dataStart = -1;
+        for (let i = 0; i < Math.min(rows.length, 20); i++) {
           const idx = rows[i].findIndex(c => /^\s*hospital\s*$/i.test(c || ""));
-          if (idx >= 0) { headerIdx = i; hospCol = idx; break; }
+          if (idx >= 0) { hospCol = idx; dataStart = i + 1; break; }
         }
-        if (headerIdx < 0) throw new Error("Header HOSPITAL no encontrado");
+        if (hospCol < 0) {
+          for (let i = 0; i < Math.min(rows.length, 20); i++) {
+            const c = (rows[i][0] || "").trim();
+            if (/^hospital[\s\.,]/i.test(c) || /^cl[ií]nica\s/i.test(c)) {
+              hospCol = 0; dataStart = i; break;
+            }
+          }
+        }
+        if (hospCol < 0) throw new Error("No se encontró la columna HOSPITAL");
 
         const counts = {};
-        for (let i = headerIdx + 1; i < rows.length; i++) {
+        for (let i = dataStart; i < rows.length; i++) {
           const h = (rows[i][hospCol] || "").trim();
-          if (!h) continue;
+          if (!h || h.length < 3 || h.length > 100) continue;
           counts[h] = (counts[h] || 0) + 1;
         }
         try { localStorage.setItem(SHEET_HOSP.cacheKey, JSON.stringify({ t: Date.now(), data: counts })); } catch {}
