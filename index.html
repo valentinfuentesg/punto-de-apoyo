@@ -85,15 +85,21 @@
     }
     .leaflet-bar a:hover { background-color: #1a1a1a !important; }
 
-    /* Header */
+    /* Header — gradiente más largo y texto con sombra para que se lea sobre tiles claros */
     .header {
       position: absolute; top: 0; left: 0; right: 0; z-index: 500;
-      padding: 10px 14px;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.85), rgba(0,0,0,0));
+      padding: 10px 14px 28px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0) 100%);
       pointer-events: none;
     }
-    .header h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
-    .header p  { margin: 2px 0 0; font-size: 11px; color: var(--muted); }
+    .header h1 {
+      margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.3px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+    }
+    .header p  {
+      margin: 3px 0 0; font-size: 11px; color: #e5e7eb;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+    }
 
     /* Buscador (Nominatim) */
     .search-wrap {
@@ -221,13 +227,24 @@
     .cat-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
     .cat-btn {
       display: flex; align-items: center; gap: 12px;
-      width: 100%; padding: 14px 16px;
+      width: 100%; padding: 12px 14px;
       background: #111; border: 1px solid var(--border); border-radius: 12px;
-      color: #fff; font-size: 15px; font-weight: 500;
-      cursor: pointer; text-align: left;
+      color: #fff; font-size: 14px; font-weight: 600;
+      cursor: pointer; text-align: left; line-height: 1.25;
     }
     .cat-btn:active { background: #1a1a1a; }
+    .cat-btn:hover  { background: #1a1a1a; }
     .cat-btn .emoji { font-size: 22px; width: 28px; text-align: center; }
+    .cat-btn .cat-ico {
+      flex: 0 0 32px; height: 32px; width: 32px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: #0a0a0a; border-radius: 8px;
+    }
+    .cat-btn .cat-ico svg { width: 20px; height: 20px; }
+    .cat-btn small {
+      display: block; font-size: 11px; color: var(--muted); font-weight: 400;
+      margin-top: 2px;
+    }
     .modal .cancel-btn {
       width: 100%; margin-top: 10px; padding: 12px;
       background: transparent; color: var(--muted);
@@ -631,7 +648,7 @@
     </div>
     <div class="chip" data-filter="asistencia">
       <svg viewBox="0 0 24 24" fill="#dc2626" stroke="#7f1d1d" stroke-width="1"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/></svg>
-      Médica
+      Salud
     </div>
     <div class="chip" data-filter="peligro">
       <svg viewBox="0 0 24 24" fill="#eab308" stroke="#713f12" stroke-width="1"><path d="M12 2L1 22h22L12 2z"/><rect x="11" y="9" width="2" height="6" fill="#713f12"/><circle cx="12" cy="18" r="1" fill="#713f12"/></svg>
@@ -839,12 +856,30 @@
         </button>
       </div>
       <div class="cat-grid">
-        <button class="cat-btn" data-cat="energia">     <span class="emoji">⚡</span> Energía (luz, plantas)</button>
-        <button class="cat-btn" data-cat="senal">       <span class="emoji">📡</span> Señal / WiFi</button>
-        <button class="cat-btn" data-cat="suministros"> <span class="emoji">💧</span> Suministros (agua, comida)</button>
-        <button class="cat-btn" data-cat="asistencia">  <span class="emoji">⚕️</span> Asistencia médica</button>
-        <button class="cat-btn" data-cat="peligro">     <span class="emoji">🚫</span> Peligro / Vía trancada</button>
-        <button class="cat-btn" data-cat="movilidad">   <span class="emoji">🚗</span> Movilidad / Transporte</button>
+        <button class="cat-btn" data-cat="energia">
+          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#f59e0b" stroke="#78350f" stroke-width="1"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></span>
+          Energía / Iluminación <small>(plantas, luz, linternas)</small>
+        </button>
+        <button class="cat-btn" data-cat="senal">
+          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2.5" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1.5" fill="#1e40af"/></svg></span>
+          Señal / WiFi <small>(Movistar, Digitel, internet)</small>
+        </button>
+        <button class="cat-btn" data-cat="suministros">
+          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#0284c7" stroke="#0c4a6e" stroke-width="1"><path d="M12 2.5s7 7.5 7 12.5a7 7 0 1 1-14 0c0-5 7-12.5 7-12.5z"/></svg></span>
+          Suministros <small>(agua, comida, ropa, herramientas, mascotas)</small>
+        </button>
+        <button class="cat-btn" data-cat="asistencia">
+          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#dc2626" stroke="#7f1d1d" stroke-width="1"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/></svg></span>
+          Salud / Voluntarios <small>(médica, medicinas, primeros auxilios)</small>
+        </button>
+        <button class="cat-btn" data-cat="peligro">
+          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#eab308" stroke="#713f12" stroke-width="1"><path d="M12 2L1 22h22L12 2z"/><rect x="11" y="9" width="2" height="6" fill="#713f12"/><circle cx="12" cy="18" r="1" fill="#713f12"/></svg></span>
+          Peligro / Rescate <small>(vía trancada, derrumbe, atrapados)</small>
+        </button>
+        <button class="cat-btn" data-cat="movilidad">
+          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#7c3aed" stroke="#4c1d95" stroke-width="1"><path d="M5 11l1.7-4.7a2 2 0 0 1 1.9-1.3h8.8a2 2 0 0 1 1.9 1.3L21 11v6a1 1 0 0 1-1 1h-1.5a2 2 0 1 1-4 0h-5a2 2 0 1 1-4 0H4a1 1 0 0 1-1-1v-6h2z"/></svg></span>
+          Movilidad / Transporte <small>(carro, moto, traslado)</small>
+        </button>
       </div>
       <textarea id="noteInput" placeholder="Nota opcional (ej: hora, contacto, detalles)…"
         maxlength="280" rows="2"
@@ -917,12 +952,12 @@
     };
 
     const CATEGORIES = {
-      energia:     { emoji: "⚡",  label: "Energía",          svg: SVG_ICONS.energia },
-      senal:       { emoji: "📡",  label: "Señal / WiFi",     svg: SVG_ICONS.senal },
-      suministros: { emoji: "💧",  label: "Suministros",      svg: SVG_ICONS.suministros },
-      asistencia:  { emoji: "⚕️", label: "Asistencia médica", svg: SVG_ICONS.asistencia },
-      peligro:     { emoji: "🚫",  label: "Peligro",          svg: SVG_ICONS.peligro },
-      movilidad:   { emoji: "🚗",  label: "Movilidad / Transporte", svg: SVG_ICONS.movilidad },
+      energia:     { emoji: "⚡",  label: "Energía / Iluminación",         svg: SVG_ICONS.energia },
+      senal:       { emoji: "📡",  label: "Señal / WiFi",                  svg: SVG_ICONS.senal },
+      suministros: { emoji: "💧",  label: "Suministros",                   svg: SVG_ICONS.suministros },
+      asistencia:  { emoji: "⚕️", label: "Salud / Voluntarios",            svg: SVG_ICONS.asistencia },
+      peligro:     { emoji: "🚫",  label: "Peligro / Rescate",             svg: SVG_ICONS.peligro },
+      movilidad:   { emoji: "🚗",  label: "Movilidad / Transporte",        svg: SVG_ICONS.movilidad },
     };
 
     // ============================================================
@@ -1877,7 +1912,8 @@
       }
     }
 
-    const CA_BADGE = `<div style="margin-top:6px;font-size:10px;color:#6b7280;">📡 Vía <a href="https://caracasayuda.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">caracasayuda.com</a></div>`;
+    // Atribución a caracasayuda.com queda visible solo en el footer del info modal
+    const CA_BADGE = "";
 
     function buildCAExternalCentro(p) {
       const desc    = p.descripcion ? `<div class="popup-acepta">${escapeHtml(p.descripcion)}</div>` : "";
