@@ -2039,11 +2039,22 @@
         return;
       }
       const total = entries.reduce((s, [, n]) => s + n, 0);
+      const TOP = 5;
+      const top = entries.slice(0, TOP);
+      const more = entries.length - top.length;
       list.innerHTML =
-        `<div style="font-size:11px;color:#9ca3af;margin-bottom:6px;">${total} pacientes registrados en ${entries.length} hospital${entries.length===1?"":"es"}</div>` +
-        entries.map(([h, n]) =>
+        `<div style="font-size:11px;color:#9ca3af;margin-bottom:6px;">${total} pacientes registrados en ${entries.length} hospital${entries.length===1?"":"es"} · top ${top.length}</div>` +
+        top.map(([h, n]) =>
           `<div class="hosp-item"><span class="name">${escapeHtml(h)}</span><span class="count">${n}</span></div>`
-        ).join("");
+        ).join("") +
+        (more > 0
+          ? `<a href="${SHEET_HOSP.url}" target="_blank" rel="noopener noreferrer"
+              style="display:block;text-align:center;color:#60a5fa;font-size:12px;
+                     padding:8px 6px;text-decoration:none;margin-top:4px;
+                     border:1px dashed var(--border);border-radius:8px;">
+              Ver ${more} hospital${more===1?"":"es"} más →
+             </a>`
+          : "");
     }
 
     let hospMarkersRendered = false;
