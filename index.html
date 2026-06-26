@@ -18,7 +18,7 @@
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
     img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org;
     font-src 'self' data:;
-    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com;
+    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com https://localizadosvenezuela.com;
     manifest-src 'self';
     upgrade-insecure-requests;
   " />
@@ -823,7 +823,10 @@
             Datos: OpenStreetMap · Carto · listados públicos de centros de acopio.<br>
             Centros y reportes adicionales vía
             <a href="https://caracasayuda.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">caracasayuda.com</a>
-            (iniciativa de Caracas Merch).
+            (Caracas Merch).<br>
+            Hospitales y conteos vía
+            <a href="https://localizadosvenezuela.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">localizadosvenezuela.com</a>
+            (Giuseppe Gangi, MIT).
           </p>
         </section>
       </div>
@@ -1136,7 +1139,8 @@
           <p style="font-size:11px;color:#9ca3af;margin:0 0 6px;">
             Requiere ${FULFILL_THRESHOLD} confirmaciones distintas para retirar del mapa. ${progress}
           </p>
-          <textarea class="ff-note" maxlength="280" rows="2" placeholder="¿Qué entregaron / quién atendió? (opcional)"></textarea>
+          <textarea class="ff-note" maxlength="280" minlength="5" rows="2" required
+            placeholder="Describe qué entregaron / quién atendió (mínimo 5 caracteres)"></textarea>
           <div class="ff-actions">
             <button class="ff-cancel" type="button">Cancelar</button>
             <button class="ff-confirm" type="button">Confirmar atendida</button>
@@ -1766,7 +1770,18 @@
       const id  = row?.dataset?.id;
       if (!id || !sb) return;
 
-      const note = (row.querySelector(".ff-note")?.value || "").trim().slice(0, 280) || null;
+      const noteEl = row.querySelector(".ff-note");
+      const note   = (noteEl?.value || "").trim().slice(0, 280);
+      // Nota OBLIGATORIA (mínimo 5 caracteres) para evitar votos vacíos
+      if (note.length < 5) {
+        if (noteEl) {
+          noteEl.style.borderColor = "#dc2626";
+          noteEl.focus();
+        }
+        showStatus("Describe brevemente cómo fue atendida (mínimo 5 caracteres)", "err", 3500);
+        return;
+      }
+      if (noteEl) noteEl.style.borderColor = "";
       conf.disabled = true; conf.textContent = "…";
 
       const { data, error } = await sb.rpc("fulfill_report", { p_report: id, p_fp: CLIENT_FP, p_note: note });
@@ -1852,6 +1867,46 @@
     // por lo que el browser bloquea el fetch por CORS. Para reactivar haría falta
     // un proxy server-side (ej. Cloudflare Worker). La función queda dormida.
     // setTimeout(loadTerremotoHospitals, 1800);
+
+    // ============================================================
+    // LOCALIZADOSVENEZUELA.COM — API pública con CORS abierto (MIT license).
+    // Reemplaza el fetch muerto de terremoto. Da hospitales + recuento de
+    // pacientes "localizados" (encontrados en el hospital). Atribución en
+    // el footer del info modal.
+    // ============================================================
+    let localizadosLoaded = false;
+    async function loadLocalizadosHospitals() {
+      if (localizadosLoaded) return;
+      localizadosLoaded = true;
+      try {
+        const res = await fetch("https://localizadosvenezuela.com/api/v1/lugares", { mode: "cors" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const json = await res.json();
+        const lugares = Array.isArray(json?.data) ? json.data : [];
+        if (!lugares.length) return;
+
+        // Filtrar: solo hospitales con >0 localizados; el resto son ruido
+        const existingKeys = new Set(
+          markers.filter(m => m.isHospital).map(m => canonicalize(m.hospitalName).key)
+        );
+        const counts = {};
+        for (const l of lugares) {
+          if (!l || !l.nombre) continue;
+          if (l.tipo !== "hospital" && l.tipo !== "recinto") continue;
+          const n = Number(l.totalLocalizados) || 0;
+          if (n < 1) continue;
+          if (existingKeys.has(canonicalize(l.nombre).key)) continue;
+          counts[l.nombre] = (counts[l.nombre] || 0) + n;
+        }
+        if (Object.keys(counts).length) {
+          renderHospitalMarkers(counts);
+          showStatus(`+${Object.keys(counts).length} hospitales adicionales cargados`, "ok", 2500);
+        }
+      } catch (e) {
+        console.warn("localizadosvenezuela fetch:", e.message);
+      }
+    }
+    setTimeout(loadLocalizadosHospitals, 2000);
 
     // ============================================================
     // CARACASAYUDA.COM — merge de su tabla pública `puntos` (Supabase REST).
@@ -2005,7 +2060,7 @@
         }
       }
       if (addedC + addedR > 0) {
-        showStatus(`+${addedC} centros y ${addedR} reportes vía caracasayuda.com`, "ok", 3000);
+        showStatus(`+${addedC} centros y ${addedR} reportes cargados`, "ok", 3000);
       }
     }
     // Disparar 2.5s después del init (después de centros y antes de Nominatim del resto)
@@ -2066,11 +2121,11 @@
     // Coordenadas conocidas de hospitales venezolanos (defensa contra Nominatim caído / rate-limit).
     // Match por substring case-insensitive del nombre del sheet.
     const HOSPITAL_COORDS = [
-      { match: /universitario.*caracas|huc|clin[ií]cas.*caracas/i, name: "Hospital Universitario de Caracas (HUC)", lat: 10.4923, lng: -66.8908 },
-      { match: /vargas.*caracas|jos[eé] mar[ií]a vargas/i,         name: "Hospital Vargas de Caracas",              lat: 10.5023, lng: -66.9136 },
-      { match: /domingo luciani|el llanito/i,                       name: "Hospital Domingo Luciani (El Llanito)",   lat: 10.4836, lng: -66.8067 },
+      { match: /universitario.*caracas|huc|clin[ií]cas.*caracas/i, name: "Hospital Universitario de Caracas (HUC)", lat: 10.4923, lng: -66.8908, bloodDonors: true },
+      { match: /vargas.*caracas|jos[eé] mar[ií]a vargas/i,         name: "Hospital Vargas de Caracas",              lat: 10.5023, lng: -66.9136, bloodDonors: true },
+      { match: /domingo luciani|el llanito/i,                       name: "Hospital Domingo Luciani (El Llanito)",   lat: 10.4836, lng: -66.8067, bloodDonors: true },
       { match: /p[eé]rez de le[oó]n|p[eé]rez le[oó]n|petare/i,      name: "Hospital Pérez de León (Petare)",         lat: 10.4951, lng: -66.7889 },
-      { match: /miguel p[eé]rez carre[nñ]o|caricuao|p[eé]rez carre[nñ]o/i, name: "Hospital Miguel Pérez Carreño",     lat: 10.4598, lng: -66.9716 },
+      { match: /miguel p[eé]rez carre[nñ]o|caricuao|p[eé]rez carre[nñ]o/i, name: "Hospital Miguel Pérez Carreño",     lat: 10.4598, lng: -66.9716, bloodDonors: true },
       { match: /magallanes de catia/i,                              name: "Hospital de Catia (Magallanes)",          lat: 10.5142, lng: -66.9489 },
       // Periférico de Catia tiene OTRO nombre: "Dr. Ricardo Baquero González". Cubrimos typo "Hopital".
       { match: /perif[eé]rico.*catia|catia.*perif[eé]rico|baquero gonz[aá]lez|h[oó]pital.*baquero/i, name: "Hospital Periférico de Catia (Dr. Ricardo Baquero González)", lat: 10.5197, lng: -66.9460 },
@@ -2101,7 +2156,9 @@
     function findHospitalCoords(rawName) {
       if (!rawName) return null;
       for (const h of HOSPITAL_COORDS) {
-        if (h.match.test(rawName)) return { lat: h.lat, lng: h.lng, canonical: h.name };
+        if (h.match.test(rawName)) return {
+          lat: h.lat, lng: h.lng, canonical: h.name, bloodDonors: !!h.bloodDonors,
+        };
       }
       return null;
     }
@@ -2155,9 +2212,16 @@
       });
     }
 
-    function buildHospitalPopup(name, count) {
+    function buildHospitalPopup(name, count, opts = {}) {
+      const bloodBadge = opts.bloodDonors
+        ? `<div style="margin:6px 0;padding:8px 10px;background:#7f1d1d;color:#fee2e2;
+             border-left:4px solid #ef4444;border-radius:4px;font-weight:700;font-size:12px;">
+             🩸 BUSCAN DONANTES DE SANGRE — acércate si puedes donar
+           </div>`
+        : "";
       return `<span class="popup-badge" style="background:#7f1d1d;color:#fee2e2;">🏥 Hospital</span><br>` +
              `<div class="popup-org" style="color:#fca5a5;">${escapeHtml(name)}</div>` +
+             bloodBadge +
              `<div class="popup-acepta"><strong>${count}</strong> ${count === 1 ? "paciente registrado" : "pacientes registrados"} en este hospital.</div>` +
              `<div style="margin-top:6px;">` +
              `<a href="${SHEET_HOSP.url}" target="_blank" rel="noopener noreferrer" ` +
@@ -2205,7 +2269,7 @@
       for (const slot of Object.values(agg)) {
         if (slot.coords) {
           const layer = L.marker([slot.coords.lat, slot.coords.lng], { icon: makeHospitalIcon() })
-            .bindPopup(buildHospitalPopup(slot.display, slot.count));
+            .bindPopup(buildHospitalPopup(slot.display, slot.count, { bloodDonors: !!slot.coords?.bloodDonors }));
           const entry = { layer, isHospital: true, category: "hospital", hospitalName: slot.display };
           markers.push(entry);
           if (matchesFilter(entry, activeFilter)) layersToAdd.push(layer);
