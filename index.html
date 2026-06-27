@@ -1436,7 +1436,7 @@
       const already = isConfirmedLocal(reportId);
       const n = Number(count) || 0;
       return `<div class="confirm-row" data-id="${reportId}">
-        <button class="confirm-btn" ${already ? "disabled" : ""}>${already ? "✓ Confirmado" : "👍 Confirmar"}</button>
+        <button class="confirm-btn" ${already ? "disabled" : ""}>${already ? "✓ Confirmado" : "Confirmar"}</button>
         <span class="confirm-count"><strong>${n}</strong> ${n === 1 ? "confirmación" : "confirmaciones"}</span>
       </div>`;
     }
@@ -1485,12 +1485,11 @@
       const layer = L.marker([r.lat, r.lng], { icon: makeIcon(r.category, type) })
         .bindPopup(
           `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
-          `<b>${cat.emoji} ${cat.label}</b>${note}` +
+          `<b style="display:inline-flex;align-items:center;gap:5px;">${cat.svg}<span>${cat.label}</span></b>${note}` +
           phoneHtml +
           `<br><small>${timeAgo(r.created_at)}</small><br>` +
           gmapsLink(r.lat, r.lng) + waShareButton(waText) +
-          confirmRow(r.id, r.confirmations) +
-          (type === "request" ? fulfillRow(r.id, r.fulfill_count) : "")
+          (type === "offer" ? confirmRow(r.id, r.confirmations) : fulfillRow(r.id, r.fulfill_count))
         );
       const cg = getOrCreateCluster(r.category);
       const entry = { layer, id: r.id, category: r.category, report_type: type, created_at: r.created_at, cg };
@@ -2022,10 +2021,10 @@
       const layer = L.marker([c.lat, c.lng], { icon: makeCentroIcon() });
       const acepta   = c.acepta   ? `<div class="popup-acepta"><b>Aceptan:</b> ${escapeHtml(c.acepta)}</div>` : "";
       const contacto = c.contacto ? `<div class="popup-contacto"><b>Contacto:</b> ${renderContacto(c.contacto)}</div>` : "";
-      const ciudad   = c.ciudad   ? `<div style="color:#9ca3af;font-size:11px;margin-top:4px;">📍 ${escapeHtml(c.ciudad)}</div>` : "";
+      const ciudad   = c.ciudad   ? `<div style="color:#9ca3af;font-size:11px;margin-top:4px;display:flex;align-items:center;gap:3px;"><svg viewBox="0 0 24 24" width="11" height="11" fill="#9ca3af"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>${escapeHtml(c.ciudad)}</div>` : "";
       const waText   = `Centro de acopio: ${c.org}\n${c.addr}\n${c.acepta ? "Aceptan: " + c.acepta + "\n" : ""}Ubicación: ${gmapsUrl(c.lat, c.lng)}\n\nMás info en ${SITE_URL}`;
       layer.bindPopup(
-        `<span class="popup-badge" style="background:#075985;color:#bae6fd;">📦 Centro de acopio</span><br>` +
+        `<span class="popup-badge" style="background:#075985;color:#bae6fd;display:inline-flex;align-items:center;gap:4px;">${SVG_ICONS.centro.replace('width="20" height="20"','width="13" height="13"')} Centro de acopio</span><br>` +
         `<div class="popup-org">${escapeHtml(c.org)}</div>` +
         `<div class="popup-addr">${escapeHtml(c.addr)}</div>` +
         acepta + contacto + ciudad +
@@ -2554,7 +2553,7 @@
       const dir     = p.direccion   ? `<div class="popup-addr">${escapeHtml(p.direccion)}</div>` : "";
       const waText = `Centro de acopio: ${p.nombre || ""}\n${p.direccion || ""}\n${p.descripcion ? p.descripcion + "\n" : ""}Ubicación: ${gmapsUrl(p.lat, p.lng)}\n\nMás info en ${SITE_URL}`;
       const layer = L.marker([p.lat, p.lng], { icon: makeCentroIcon() }).bindPopup(
-        `<span class="popup-badge" style="background:#075985;color:#bae6fd;">📦 Centro de acopio</span><br>` +
+        `<span class="popup-badge" style="background:#075985;color:#bae6fd;display:inline-flex;align-items:center;gap:4px;">${SVG_ICONS.centro.replace('width="20" height="20"','width="13" height="13"')} Centro de acopio</span><br>` +
         `<div class="popup-org">${escapeHtml(p.nombre || "Centro de acopio")}</div>` +
         dir + desc + horario + tel +
         `<div>${gmapsLink(p.lat, p.lng)}${waShareButton(waText)}</div>` + CA_BADGE
@@ -2574,21 +2573,20 @@
       const alreadyConf = isConfirmedLocal("ca_" + p.id);
       const layer = L.marker([p.lat, p.lng], { icon: makeIcon(mappedCategory, type) }).bindPopup(
         `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
-        `<b>${cat.emoji} ${cat.label}</b><br>` +
+        `<b style="display:inline-flex;align-items:center;gap:5px;">${cat.svg}<span>${cat.label}</span></b><br>` +
         `<div style="color:#fff;font-weight:600;">${escapeHtml(p.nombre || "")}</div>` +
         dir +
         (extras ? `<div style="color:#cbd5e1;font-size:12px;margin-top:4px;">${escapeHtml(extras)}</div>` : "") +
         tel + horario +
         `<div>${gmapsLink(p.lat, p.lng)}${waShareButton(waText)}</div>` +
-        `<div class="confirm-row ca-confirm-row" data-ca-id="${escapeHtml(String(p.id))}">
-          <button class="confirm-btn ca-confirm-btn" ${alreadyConf ? "disabled" : ""}>${alreadyConf ? "✓ Confirmado" : "Confirmar"}</button>
-          <span class="confirm-count"><strong>0</strong> confirmaciones</span>
-        </div>` +
-        (type === "request"
-          ? `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #374151;font-size:11px;color:#9ca3af;">
-               Si esta solicitud fue atendida, <a href="#" class="ca-fulfilled-link" data-ca-id="${escapeHtml(String(p.id))}" style="color:#10b981;">márcala aquí</a>.
+        (type === "offer"
+          ? `<div class="confirm-row ca-confirm-row" data-ca-id="${escapeHtml(String(p.id))}">
+               <button class="confirm-btn ca-confirm-btn" ${alreadyConf ? "disabled" : ""}>${alreadyConf ? "✓ Confirmado" : "Confirmar"}</button>
+               <span class="confirm-count"><strong>0</strong> confirmaciones</span>
              </div>`
-          : "")
+          : `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #374151;font-size:11px;color:#9ca3af;">
+               Si esta solicitud fue atendida, <a href="#" class="ca-fulfilled-link" data-ca-id="${escapeHtml(String(p.id))}" style="color:#10b981;">márcala aquí</a>.
+             </div>`)
       );
       return layer;
     }
