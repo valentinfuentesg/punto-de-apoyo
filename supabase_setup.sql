@@ -50,11 +50,13 @@ do $$ begin
     alter table public.reports add constraint reports_exact_address_len
       check (exact_address is null or length(exact_address) between 5 and 280);
   end if;
-  -- Si es centro_acopio: requiere contact_phone, reporter_name y exact_address
+  -- Si es centro_acopio de usuario: requiere contact_phone, reporter_name y exact_address
+  -- Los centros de fuentes externas (source='ca') no tienen esos campos → excluir
   alter table public.reports drop constraint if exists reports_centro_acopio_required;
   alter table public.reports add constraint reports_centro_acopio_required
     check (
       category <> 'centro_acopio'
+      or source = 'ca'
       or (contact_phone is not null and reporter_name is not null and exact_address is not null)
     );
   -- Peligro solo puede ser request (alerta de zona peligrosa, nadie "ofrece" peligro)
@@ -156,22 +158,33 @@ create policy "anon_read_active"
     and created_at > now() - interval '2 days'
   );
 
--- INSERT: validaciones extra en la policy (defensa en profundidad sobre los CHECK)
+-- INSERT: dos rutas — fuentes externas (CA sync) y reportes ciudadanos
 create policy "anon_insert_valid"
   on public.reports
   for insert
   to anon
   with check (
-    category in ('energia','senal','suministros','asistencia','peligro','movilidad','centro_acopio')
-    and report_type in ('offer','request')
-    and (category <> 'peligro' or report_type = 'request')          -- peligro solo es request
-    and (category <> 'centro_acopio' or report_type = 'offer')      -- centros solo es offer
-    and lat between -1 and 17
-    and lng between -75 and -58
-    and (note is null or length(note) <= 280)
-    and (contact_phone is null or length(contact_phone) between 7 and 25)
-    and (reporter_name is null or length(reporter_name) between 2 and 80)
-    and (exact_address is null or length(exact_address) between 5 and 280)
+    -- Ruta 1: sync externo (CaracasAyuda u otras fuentes)
+    (source = 'ca'
+      and external_source is not null
+      and external_id is not null
+      and category in ('energia','senal','suministros','asistencia','peligro','movilidad','centro_acopio')
+      and report_type in ('offer','request')
+      and lat between -1 and 17
+      and lng between -75 and -58)
+    or
+    -- Ruta 2: reportes ciudadanos
+    (source = 'user'
+      and category in ('energia','senal','suministros','asistencia','peligro','movilidad','centro_acopio')
+      and report_type in ('offer','request')
+      and (category <> 'peligro' or report_type = 'request')
+      and (category <> 'centro_acopio' or report_type = 'offer')
+      and lat between -1 and 17
+      and lng between -75 and -58
+      and (note is null or length(note) <= 280)
+      and (contact_phone is null or length(contact_phone) between 7 and 25)
+      and (reporter_name is null or length(reporter_name) between 2 and 80)
+      and (exact_address is null or length(exact_address) between 5 and 280))
   );
 
 -- NUNCA crear políticas de UPDATE ni DELETE para 'anon'.
@@ -430,9 +443,11 @@ do $$ begin
   end if;
 end $$;
 
+-- Non-partial index required for PostgREST ON CONFLICT upserts
+-- NULL external_key rows are always distinct, so no collisions
+drop index if exists public.centros_external_key_idx;
 create unique index if not exists centros_external_key_idx
-  on public.centros(source, external_key)
-  where external_key is not null;
+  on public.centros(source, external_key);
 
 create index if not exists centros_latlng_idx on public.centros (lat, lng);
 

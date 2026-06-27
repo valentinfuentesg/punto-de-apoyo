@@ -613,11 +613,11 @@
     .fab.offer   { background: #10b981; box-shadow: 0 8px 24px rgba(16,185,129,0.45); }
     .fab.request { background: #f97316; box-shadow: 0 8px 24px rgba(249,115,22,0.45); }
 
-    /* Botón "Buscar persona" */
+    /* Botón "Recursos" */
     .buscar-btn {
-      position: absolute; top: 14px; right: 52px; z-index: 500;
+      position: absolute; bottom: 132px; right: 16px; z-index: 500;
       display: flex; align-items: center; gap: 6px;
-      padding: 7px 12px; border-radius: 20px;
+      padding: 8px 13px; border-radius: 20px;
       background: #1e293b; border: 1.5px solid #475569;
       color: #e2e8f0; font-size: 13px; font-weight: 600;
       cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
@@ -626,6 +626,10 @@
     }
     .buscar-btn:hover { background: #334155; border-color: #60a5fa; }
     .buscar-btn svg { flex-shrink: 0; }
+    @media (max-width: 420px) {
+      .buscar-btn .buscar-label { display: none; }
+      .buscar-btn { padding: 8px 10px; }
+    }
 
     /* Panel "Buscar persona" */
     .buscar-panel-bg {
@@ -847,9 +851,9 @@
     </div>
   </div>
 
-  <button id="buscarBtn" class="buscar-btn" aria-label="Buscar persona desaparecida">
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/><circle cx="11" cy="9" r="2" fill="#60a5fa" stroke="none"/></svg>
-    Buscar persona
+  <button id="buscarBtn" class="buscar-btn" aria-label="Recursos y plataformas de ayuda">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    <span class="buscar-label">Recursos</span>
   </button>
 
   <button id="infoBtn" class="info-btn" title="Información y emergencias" aria-label="Información y emergencias">
@@ -875,62 +879,14 @@
             Heridos en hospitales
           </h3>
           <p style="font-size:12px;color:#9ca3af;margin-bottom:6px;">
-            Personas hospitalizadas tras el sismo. Por privacidad, aquí solo se ve el <strong>conteo por hospital</strong>.
-            Para buscar a un familiar, abre la lista completa.
+            Conteo de personas hospitalizadas por hospital. Para buscar a un familiar por nombre usa la lista completa.
           </p>
           <div id="hospList" class="hosp-list">
             <div class="hosp-loading">Cargando…</div>
           </div>
           <a class="hosp-link" href="https://docs.google.com/spreadsheets/d/1HuC8kWfurjlFH4W1nI34t67701QlRhiTyQAPTR6bKIc/edit?gid=0" target="_blank" rel="noopener noreferrer">
-            🔍 Buscar familiar (lista completa)
+            Buscar familiar (lista completa)
           </a>
-        </section>
-
-        <section>
-          <h3>
-            <svg viewBox="0 0 24 24" fill="#ef4444" stroke="#7f1d1d" stroke-width="1"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 11.4 11.4 0 0 0 3.6.6 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .6 3.6 1 1 0 0 1-.24 1z"/></svg>
-            Teléfonos de emergencia
-          </h3>
-          <p style="font-size:12px;color:#9ca3af;">Toca un número para llamar.</p>
-          <div class="phone-list">
-            <div class="phone-card">
-              <span class="label">CANTV (fijo)</span>
-              <a class="num" href="tel:171">171</a>
-            </div>
-            <div class="phone-card">
-              <span class="label">Movilnet</span>
-              <a class="num" href="tel:*1">*1</a>
-            </div>
-            <div class="phone-card">
-              <span class="label">Digitel</span>
-              <a class="num" href="tel:112">112</a>
-            </div>
-            <div class="phone-card">
-              <span class="label">Movistar</span>
-              <a class="num" href="tel:911">911</a>
-            </div>
-          </div>
-
-          <div class="phone-sub">
-            <h4>🚑 Aeroambulancias (Caracas)</h4>
-            <a class="num-line" href="tel:02129932541">(0212) 993-25-41</a>
-            <a class="num-line" href="tel:02129928980">(0212) 992-89-80</a>
-            <a class="num-line" href="tel:02129928990">(0212) 992-89-90</a>
-            <a class="num-line" href="tel:02129917940">(0212) 991-79-40</a>
-          </div>
-
-          <div class="phone-sub">
-            <h4>🚑 Rescarven (Caracas)</h4>
-            <a class="num-line" href="tel:02129936911">(0212) 993-69-11</a>
-            <a class="num-line" href="tel:02129936991">(0212) 993-69-91</a>
-            <a class="num-line" href="tel:02129931310">(0212) 993-13-10</a>
-            <a class="num-line" href="tel:02129933367">(0212) 993-33-67</a>
-          </div>
-
-          <div class="phone-sub">
-            <h4>🚑 Ambulancia Metropolitano (Caracas)</h4>
-            <a class="num-line" href="tel:02125454545">(0212) 545-45-45</a>
-          </div>
         </section>
 
         <section>
@@ -938,86 +894,31 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="17" stroke-linecap="round"/><circle cx="12" cy="7.5" r="1.2" fill="#60a5fa"/></svg>
             Sobre Punto de Apoyo
           </h3>
-          <p><strong>Iniciativa ciudadana, sin fines de lucro</strong>, creada en respuesta a la emergencia sísmica en Venezuela. Su único propósito es facilitar la <strong>ayuda mutua</strong>: que cualquier persona pueda encontrar y compartir información sobre centros de acopio, agua, comida, energía, señal, atención médica y zonas de peligro.</p>
-          <p>No es un servicio oficial, no recibe pago, no vende publicidad. Los datos son aportados por la comunidad y por listas públicas de organizaciones civiles.</p>
-          <p style="background:#0a0a0a;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;">
-            🤖 <strong>Construido con asistencia de IA.</strong> El sitio fue diseñado y programado en colaboración con un asistente de inteligencia artificial (Claude). El código es revisado por humanos, pero pueden existir errores. Si encuentras alguno, repórtalo.
+          <p><strong>Iniciativa ciudadana sin fines de lucro</strong> para facilitar la ayuda mutua tras el sismo. Los datos vienen de la comunidad y de listas públicas. No es un servicio oficial. Construido con asistencia de IA (Claude).</p>
+          <p style="margin-top:8px;">
+            Sugerencias o errores:
+            <a href="https://twitter.com/vxlentinF" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;font-weight:600;">𝕏 @vxlentinF</a>
           </p>
-        </section>
-
-        <section>
-          <h3>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            Contacto
-          </h3>
-          <p>Para sugerencias, reportar errores, agregar centros de acopio o cualquier consulta:</p>
-          <p style="text-align:center;">
-            <a href="https://twitter.com/vxlentinF" target="_blank" rel="noopener noreferrer"
-               style="display:inline-block;background:#0a0a0a;border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-weight:600;">
-               𝕏 @vxlentinF
-            </a>
-          </p>
-        </section>
-
-        <section>
-          <h3>
-            <svg viewBox="0 0 24 24" fill="#0ea5e9" stroke="#0c4a6e" stroke-width="1"><path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/></svg>
-            Centros de acopio
-          </h3>
-          <p>Los puntos azules son <strong>centros de acopio oficiales</strong>, recopilados de fuentes públicas (Comando ConVzla, Cáritas, alcaldías, ONGs, sociedad civil). Verifica el horario y los insumos antes de acudir.</p>
         </section>
 
         <section>
           <h3>
             <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            Privacidad de datos
+            Privacidad
           </h3>
           <ul>
-            <li><strong>No registramos cuentas, no pedimos email ni nombre.</strong></li>
-            <li>La <strong>geolocalización</strong> ocurre en tu navegador y solo se usa para centrar el mapa. Nunca se envía a nuestro servidor.</li>
-            <li>Cuando reportas un punto, solo guardamos: ubicación tocada (lat/lng), categoría, tipo (ofrece/solicita), una nota opcional y la fecha.</li>
-            <li>Generamos una <strong>huella anónima local</strong> (UUID en tu navegador) para evitar spam. No es tu IP ni tu identidad.</li>
-            <li><strong>No compartimos datos con terceros.</strong> Los reportes son públicos por naturaleza (cualquiera los ve en el mapa).</li>
-            <li>Los reportes ciudadanos <strong>se borran automáticamente a los 7 días</strong>.</li>
-          </ul>
-        </section>
-
-        <section>
-          <h3>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
-            Términos de uso
-          </h3>
-          <ul>
-            <li>Este mapa muestra <strong>información no oficial</strong>. Úsalo como referencia, pero <strong>verifica antes de actuar</strong>, especialmente en situaciones de peligro o salud.</li>
-            <li>No nos responsabilizamos por la veracidad de reportes ciudadanos: cualquiera puede agregar puntos.</li>
-            <li><strong>No abuses del servicio</strong>: hay rate limit de 5 reportes por minuto. El spam o reportes falsos pueden ser bloqueados.</li>
-            <li>Prohibido publicar contenido ofensivo, comercial, político partidista o no relacionado con la emergencia.</li>
-            <li>En emergencias reales de vida o muerte, <strong>llama primero a los servicios oficiales</strong> (171, 112, 911, *1) — esta app no los sustituye.</li>
-          </ul>
-        </section>
-
-        <section>
-          <h3>
-            <svg viewBox="0 0 24 24" fill="#fbbf24" stroke="#78350f" stroke-width="1"><path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/></svg>
-            Cómo ayudar
-          </h3>
-          <ul>
-            <li>Si conoces un centro de acopio que falta o un dato incorrecto, contacta al equipo (por ahora, vía las redes de las organizaciones listadas).</li>
-            <li>Comparte el mapa con tu comunidad. Mientras más gente lo use, más útil se vuelve.</li>
-            <li>Si tienes recursos (agua, comida, medicinas, ropa, cobijas), llévalos al centro de acopio más cercano marcado en azul.</li>
+            <li>Sin cuentas, sin email, sin nombre requerido.</li>
+            <li>La geolocalización nunca se envía a ningún servidor.</li>
+            <li>Solo guardamos: lat/lng tocada, categoría, tipo y nota opcional.</li>
+            <li>Las solicitudes se borran a las <strong>24 h</strong>, los ofrecimientos a las <strong>72 h</strong>.</li>
           </ul>
         </section>
 
         <section>
           <p style="text-align:center;color:#6b7280;font-size:11px;">
-            Hecho con 💛💙❤️ por y para Venezuela.<br>
             Datos: OpenStreetMap · Carto · listados públicos de centros de acopio.<br>
-            Centros y reportes adicionales vía
-            <a href="https://caracasayuda.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">caracasayuda.com</a>
-            (Caracas Merch).<br>
-            Hospitales y conteos vía
-            <a href="https://localizadosvenezuela.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">localizadosvenezuela.com</a>
-            (Giuseppe Gangi, MIT).
+            Centros y reportes vía <a href="https://caracasayuda.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">caracasayuda.com</a> ·
+            Hospitales vía <a href="https://localizadosvenezuela.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">localizadosvenezuela.com</a>
           </p>
         </section>
       </div>
@@ -1030,54 +931,78 @@
   </div>
 
   <div id="toast" class="toast">Toca el mapa donde quieras reportar</div>
-  <!-- Panel "Buscar persona desaparecida" -->
+  <!-- Panel "Recursos" -->
   <div id="buscarPanel" class="buscar-panel-bg">
     <div class="buscar-panel">
       <div class="buscar-panel-header">
-        <h3>🔍 Buscar persona</h3>
+        <h3>Recursos y plataformas</h3>
         <button id="buscarClose" aria-label="Cerrar">✕</button>
       </div>
-      <p>Plataformas con registros de personas desaparecidas, hospitalizadas o localizadas tras el sismo.</p>
-      <a class="buscar-link-card" href="https://venezuelareporta.org" target="_blank" rel="noopener noreferrer">
+      <p>Plataformas ciudadanas de apoyo durante la emergencia sísmica.</p>
+      <a class="buscar-link-card" href="https://recursos-terremoto-venezuela.netlify.app/" target="_blank" rel="noopener noreferrer">
         <div class="blc-icon" style="background:#1e3a5f;">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         </div>
         <div class="blc-text">
-          <span class="blc-title">venezuelareporta.org</span>
-          <span class="blc-sub">61,000+ reportes · 5,800+ localizados</span>
+          <span class="blc-title">Directorio de herramientas</span>
+          <span class="blc-sub">recursos-terremoto-venezuela.netlify.app</span>
         </div>
         <span class="blc-arrow">›</span>
       </a>
-      <a class="buscar-link-card" href="https://aquiestoy.xyz" target="_blank" rel="noopener noreferrer">
-        <div class="blc-icon" style="background:#1a3a2a;">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><path d="M12 22s-7-7.5-7-13a7 7 0 1 1 14 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5"/></svg>
-        </div>
-        <div class="blc-text">
-          <span class="blc-title">aquiestoy.xyz</span>
-          <span class="blc-sub">5,800+ hospitalizados en 9 centros</span>
-        </div>
-        <span class="blc-arrow">›</span>
-      </a>
-      <a class="buscar-link-card" href="https://desaparecidosvenezuela.com" target="_blank" rel="noopener noreferrer">
+      <a class="buscar-link-card" href="https://www.desaparecidosvenezuela.com/" target="_blank" rel="noopener noreferrer">
         <div class="blc-icon" style="background:#3a1e1e;">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
         <div class="blc-text">
-          <span class="blc-title">desaparecidosvenezuela.com</span>
+          <span class="blc-title">Desaparecidos Venezuela</span>
           <span class="blc-sub">1,200+ reportes con foto</span>
         </div>
         <span class="blc-arrow">›</span>
       </a>
-      <a class="buscar-link-card" href="https://tebusco.app" target="_blank" rel="noopener noreferrer">
-        <div class="blc-icon" style="background:#2d1a3a;">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      <a class="buscar-link-card" href="https://patitasasalvovenezuela.org" target="_blank" rel="noopener noreferrer">
+        <div class="blc-icon" style="background:#1a3a2a;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </div>
         <div class="blc-text">
-          <span class="blc-title">tebusco.app</span>
-          <span class="blc-sub">Base offline, sync automático</span>
+          <span class="blc-title">Patitas a Salvo</span>
+          <span class="blc-sub">Mascotas perdidas y encontradas</span>
         </div>
         <span class="blc-arrow">›</span>
       </a>
+      <a class="buscar-link-card" href="https://caritasvenezuela.org/donaciones/" target="_blank" rel="noopener noreferrer">
+        <div class="blc-icon" style="background:#2d1a0a;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fb923c" stroke-width="2" stroke-linecap="round"><path d="M12 22s-7-7.5-7-13a7 7 0 1 1 14 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        </div>
+        <div class="blc-text">
+          <span class="blc-title">Caritas Venezuela</span>
+          <span class="blc-sub">Donaciones y asistencia humanitaria</span>
+        </div>
+        <span class="blc-arrow">›</span>
+      </a>
+
+      <div style="margin-top:14px;border-top:1px solid #1f2937;padding-top:14px;">
+        <p style="color:#94a3b8;font-size:12px;margin:0 0 10px;font-weight:600;">EMERGENCIAS — toca para llamar</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <a href="tel:171" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:10px;text-decoration:none;">
+            <span style="color:#94a3b8;font-size:11px;">CANTV</span><span style="color:#f1f5f9;font-weight:700;font-size:15px;">171</span>
+          </a>
+          <a href="tel:*1" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:10px;text-decoration:none;">
+            <span style="color:#94a3b8;font-size:11px;">Movilnet</span><span style="color:#f1f5f9;font-weight:700;font-size:15px;">*1</span>
+          </a>
+          <a href="tel:112" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:10px;text-decoration:none;">
+            <span style="color:#94a3b8;font-size:11px;">Digitel</span><span style="color:#f1f5f9;font-weight:700;font-size:15px;">112</span>
+          </a>
+          <a href="tel:911" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:10px;text-decoration:none;">
+            <span style="color:#94a3b8;font-size:11px;">Movistar</span><span style="color:#f1f5f9;font-weight:700;font-size:15px;">911</span>
+          </a>
+        </div>
+        <p style="color:#94a3b8;font-size:11px;margin:10px 0 6px;font-weight:600;">Ambulancias Caracas</p>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <a href="tel:02129932541" style="color:#60a5fa;font-size:12px;text-decoration:none;">(0212) 993-25-41 · Aeroambulancias</a>
+          <a href="tel:02129936911" style="color:#60a5fa;font-size:12px;text-decoration:none;">(0212) 993-69-11 · Rescarven</a>
+          <a href="tel:02125454545" style="color:#60a5fa;font-size:12px;text-decoration:none;">(0212) 545-45-45 · Metropolitano</a>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1922,6 +1847,7 @@
           lat, lng, category,
           report_type: selectedType,
           note,
+          source: "user",
           client_fp: CLIENT_FP,
           contact_phone: phone,
           ...(category === "centro_acopio" ? {
