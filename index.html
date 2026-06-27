@@ -1482,7 +1482,9 @@
         ? `<div style="font-size:12px;margin-top:4px;"><b>Contacto:</b> ${renderContacto(r.contact_phone)}</div>`
         : "";
       const waText = `${tl.txt}: ${cat.label}\n${r.note ? r.note + "\n" : ""}${r.contact_phone ? "Tel: " + r.contact_phone + "\n" : ""}Ubicación: ${gmapsUrl(r.lat, r.lng)}\n\nMás info en ${SITE_URL}`;
-      const layer = L.marker([r.lat, r.lng], { icon: makeIcon(r.category, type) })
+      const isCentroAcopio = r.category === "centro_acopio";
+      const icon = isCentroAcopio ? makeCentroIcon() : makeIcon(r.category, type);
+      const layer = L.marker([r.lat, r.lng], { icon })
         .bindPopup(
           `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
           `<b style="display:inline-flex;align-items:center;gap:5px;">${cat.svg}<span>${cat.label}</span></b>${note}` +
@@ -1492,7 +1494,7 @@
           (type === "offer" ? confirmRow(r.id, r.confirmations) : fulfillRow(r.id, r.fulfill_count))
         );
       const cg = getOrCreateCluster(r.category);
-      const entry = { layer, id: r.id, category: r.category, report_type: type, created_at: r.created_at, cg };
+      const entry = { layer, id: r.id, category: r.category, report_type: type, created_at: r.created_at, isCentro: isCentroAcopio, cg };
       markers.push(entry);
       if (matchesFilter(entry, activeFilter)) cg.addLayer(layer);
     }
