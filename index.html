@@ -1519,10 +1519,13 @@
 
     function matchesCategoryFilter(m, f) {
       if (f === "all") return true;
-      if (f === "centros")    return m.isCentro === true;
+      if (f === "centros")    return m.isCentro === true || m.category === "centro_acopio";
       if (f === "hospitales") return m.isHospital === true;
       if (m.isCentro || m.isHospital) return false;
-      if (f.startsWith("type:")) return m.report_type === f.slice(5);
+      if (f.startsWith("type:")) {
+        if (m.category === "centro_acopio") return false; // centros van por su propio filtro
+        return m.report_type === f.slice(5);
+      }
       return m.category === f;
     }
     function matchesFilter(m, f) {
@@ -1546,7 +1549,7 @@
       if (!el) return;
       let centros = 0, hospitales = 0, ofrecen = 0, solicitan = 0;
       for (const m of markers) {
-        if (m.isCentro)        centros++;
+        if (m.isCentro || m.category === "centro_acopio") centros++;
         else if (m.isHospital) hospitales++;
         else if (m.report_type === "offer")   ofrecen++;
         else if (m.report_type === "request") solicitan++;
