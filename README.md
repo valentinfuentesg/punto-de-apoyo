@@ -1,110 +1,110 @@
-# 🇻🇪 Punto de Apoyo
+# Punto de Apoyo Venezuela
 
-> Mapa colaborativo de emergencia para Venezuela tras el sismo de 2026. Iniciativa ciudadana, sin fines de lucro.
+> Collaborative emergency map for Venezuela after the 2026 earthquake. Community-driven, non-profit.
 
-🌐 **Producción**: [puntodeapoyovenezuela.com](https://www.puntodeapoyovenezuela.com/)
-📨 **Contacto**: [@vxlentinF](https://twitter.com/vxlentinF)
+**Production**: [puntodeapoyovenezuela.com](https://www.puntodeapoyovenezuela.com/)
+**Contact**: [@vxlentinF](https://twitter.com/vxlentinF)
 
 ---
 
-## ¿Qué es?
+## What is it?
 
-Una aplicación web de **un solo archivo** (`index.html`) que muestra en un mapa:
+A single-file web app (`index.html`) that shows on a map:
 
-- 🏥 **Hospitales** con conteo de pacientes registrados y badge "🩸 Buscan donantes" cuando aplica
-- 📦 **Centros de acopio oficiales** geocoded de listados públicos
-- 🟢 **Ofertas** ciudadanas (tengo agua, plantas eléctricas, transporte, etc.)
-- 🟠 **Solicitudes** ciudadanas (necesito ayuda médica, transporte, suministros)
-- 🚫 Zonas de peligro / rescate
+- Hospitals with patient counts and blood donor requests
+- Official collection centers (centros de acopio) geocoded from public lists
+- Citizen offers (water, power, transport, supplies, etc.)
+- Citizen requests (medical help, transport, food, etc.)
+- Danger zones / rescue situations
 
-Los usuarios pueden **reportar puntos anónimamente**, **confirmar** info verificada (👍), y **marcar como atendida** solicitudes ya cubiertas (con threshold de 2 confirmaciones).
+Users can **report points anonymously**, **confirm** verified info, and **mark requests as fulfilled** (requires 2 separate confirmations).
 
 ## Stack
 
-- **Frontend**: vanilla HTML + JavaScript, sin build, sin framework
-- **Mapa**: Leaflet con tiles CartoDB Voyager
+- **Frontend**: vanilla HTML + JavaScript, no build step, no framework
+- **Map**: Leaflet with CartoDB Voyager tiles, Leaflet.markerCluster for grouping
 - **DB**: Supabase (PostgreSQL + Realtime + RLS)
-- **Hosting**: Vercel (HTTPS, CDN global, analytics privacy-friendly)
-- **Geocoding**: Nominatim (OpenStreetMap) con caché y diccionario hardcoded de hospitales VE
+- **Hosting**: Vercel (HTTPS, global CDN, privacy-friendly analytics)
+- **Geocoding**: Nominatim (OpenStreetMap) with cache and hardcoded Venezuelan hospital dictionary
 
 ## Features
 
-- 📍 Geolocalización automática + botón "ubicarme"
-- 🔍 Buscador con autocompletado (Nominatim, priorizado a Venezuela)
-- 🎓 Onboarding de 3 pasos solo la primera visita
-- 👍 Sistema de confirmaciones por reporte (anti-doble-voto vía RPC)
-- ✅ Marcar solicitudes como atendidas (requiere 2 confirmaciones distintas + nota obligatoria)
-- 🩸 Badge "Buscan donantes" en hospitales que activamente solicitan sangre
-- 🗺️ Mapa limitado a bounds de Venezuela (no se puede panear fuera)
-- 🌑 Modo claro en tiles, UI oscura para ahorro de batería
-- 📱 Responsive móvil, viewport dinámico (`100dvh`)
-- 🔄 Realtime: reportes nuevos aparecen instantáneamente vía Supabase channels
-- 🛡️ CSP estricto, X-Frame-Options DENY, sanitización de entradas, rate limit en DB
+- Auto geolocation + locate button
+- Search with autocomplete (Nominatim, Venezuela-only)
+- 3-step onboarding on first visit
+- Confirmation system per report (anti-double-vote via RPC)
+- Mark requests as fulfilled (requires 2 distinct confirmations + mandatory note)
+- Blood donor badge on hospitals actively requesting donations
+- Map bounded to Venezuela (cannot pan outside)
+- Dark UI for battery savings, light map tiles for readability
+- Mobile responsive, dynamic viewport (`100dvh`)
+- Realtime: new reports appear instantly via Supabase channels
+- Strict CSP, input sanitization, DB-level rate limiting
 
-## Fuentes de datos integradas
+## Data sources
 
-| Fuente | Tipo | Frecuencia | Licencia / atribución |
+| Source | Type | Frequency | License / attribution |
 |---|---|---|---|
 | OpenStreetMap | Tiles + geocoding | — | © OpenStreetMap contributors (ODbL) |
 | CartoDB Voyager | Map tiles | — | © CARTO |
-| Google Sheets (centros) | Lista de centros de acopio | 5 min | Lista pública mantenida por la comunidad |
-| Google Sheets (hospitales) | Conteo de pacientes | 15 min | Lista pública mantenida por la comunidad |
-| [caracasayuda.com](https://caracasayuda.com) | Centros + reportes (Supabase) | 10 min | Iniciativa de Caracas Merch, atribución visible |
-| [localizadosvenezuela.com](https://localizadosvenezuela.com) | Hospitales + conteo de localizados | On-load | MIT, por Giuseppe Gangi |
+| Google Sheets (centers) | Collection center list | 5 min | Public community-maintained list |
+| Google Sheets (hospitals) | Patient counts | 15 min | Public community-maintained list |
+| [caracasayuda.com](https://caracasayuda.com) | Centers + reports (Supabase) | 30 min | Caracas Merch initiative, attribution shown |
+| [localizadosvenezuela.com](https://localizadosvenezuela.com) | Hospitals + located persons count | On-load | MIT, by Giuseppe Gangi |
 
-Toda la data integrada es **read-only** desde APIs públicas o sheets públicos. No copiamos a nuestra DB sin permiso. Si tu plataforma quiere integrarse o desintegrarse, abre un issue o contacta por X.
+All integrated data is **read-only** from public APIs or public sheets. If your platform wants to integrate or opt out, open an issue or reach out on X.
 
 ## Deploy
 
-### Vercel (recomendado)
+### Vercel (recommended)
 
-1. Fork este repo en GitHub
-2. Conecta a Vercel (Workers & Pages → New project → Import repo)
-3. Build settings: dejar todo vacío (HTML estático)
+1. Fork this repo on GitHub
+2. Connect to Vercel (Workers & Pages → New project → Import repo)
+3. Build settings: leave everything empty (static HTML)
 4. Output directory: `/`
-5. Variables: ninguna requerida (las credenciales Supabase son anon, viven en `index.html`)
+5. Variables: none required (Supabase credentials are anon key, embedded in `index.html`)
 6. Deploy
 
-HTTPS y CDN son automáticos. Geolocalización requiere HTTPS para funcionar — Vercel resuelve eso.
+HTTPS and CDN are automatic. Geolocation requires HTTPS — Vercel handles that.
 
 ### Supabase
 
-Corre `supabase_setup.sql` en el SQL Editor de tu proyecto. Es idempotente — crea tabla `reports`, RPCs `confirm_report` y `fulfill_report`, políticas RLS, rate limits, y constraints.
+Run `supabase_setup.sql` in the SQL Editor of your project. It is idempotent — creates the `reports` table, RPCs `confirm_report` and `fulfill_report`, RLS policies, rate limits, and constraints.
 
-Asegúrate de:
-1. Usar **solo la `anon` key** en el HTML (nunca `service_role`)
-2. Configurar **Site URL** en Authentication → URL Configuration para tu dominio
-3. Activar **Realtime** en la tabla `reports` para que los inserts se broadcast
+Make sure to:
+1. Use **only the `anon` key** in the HTML (never `service_role`)
+2. Set **Site URL** in Authentication → URL Configuration to your domain
+3. Enable **Realtime** on the `reports` table so inserts broadcast to all clients
 
-## Privacidad
+## Privacy
 
-- **No hay cuentas, no pedimos email ni nombre.**
-- Geolocalización ocurre solo en el navegador, nunca se envía.
-- Reportes guardan solo: lat/lng, categoría, tipo, nota opcional, fecha. Sin PII.
-- Huella anónima local (UUID en localStorage) solo para rate-limit y anti-doble-voto.
-- Reportes ciudadanos se borran automáticamente a los 7 días vía RLS.
-- Sin cookies de terceros. Vercel Analytics es privacy-friendly y first-party.
+- No accounts, no email, no name required.
+- Geolocation happens only in the browser, never sent to any server.
+- Reports store only: lat/lng, category, type, optional note, timestamp. No PII.
+- Anonymous local fingerprint (UUID in localStorage) for rate-limiting and anti-double-vote only.
+- Citizen reports are automatically deleted after 7 days via RLS.
+- No third-party cookies. Vercel Analytics is privacy-friendly and first-party.
 
-## Contribuir
+## Contributing
 
-Cualquier PR es bienvenido, especialmente:
+Any PR is welcome, especially:
 
-- **Coordenadas de hospitales** que faltan en `HOSPITAL_COORDS` (busca en `index.html`)
-- **Traducciones** o mejoras de copy
-- **Bug fixes** o accesibilidad
-- **Reportes de seguridad**: por DM en [@vxlentinF](https://twitter.com/vxlentinF), por favor no abras issue público
+- **Hospital coordinates** missing in `HOSPITAL_COORDS` (search in `index.html`)
+- **Copy improvements** or translations
+- **Bug fixes** or accessibility improvements
+- **Security reports**: via DM at [@vxlentinF](https://twitter.com/vxlentinF), please do not open a public issue
 
 ## License
 
-[MIT](LICENSE) — usa, remix, modifica con atribución. Si construyes algo derivado, idealmente coordinar para no duplicar esfuerzos: hay muchas iniciativas hermanas y vale la pena que dialoguen.
+[MIT](LICENSE) — use, remix, modify with attribution. If you build something derived, ideally coordinate to avoid duplicating efforts: there are many sister initiatives and cross-pollination is valuable.
 
-## Créditos
+## Credits
 
-Construido en colaboración con asistencia de IA (Claude). Inspirado y enriquecido por el trabajo de muchas comunidades:
+Built with AI assistance (Claude). Inspired and enriched by the work of many communities:
 
 - [caracasayuda.com](https://caracasayuda.com) (Caracas Merch)
 - [localizadosvenezuela.com](https://localizadosvenezuela.com) (Giuseppe Gangi, [@ggangix](https://twitter.com/ggangix))
 - [terremotovenezuela.app](https://terremotovenezuela.app) (Arturo Rios, [open source](https://github.com/ArturoRiosMock/mapa-emergencia-rescate))
-- Comando ConVzla, Cáritas, Cruz Roja Venezolana, alcaldías, Voluntad Popular, Un Nuevo Tiempo, ONGs y miles de ciudadanos que mantienen los listados públicos.
+- Comando ConVzla, Caritas, Venezuelan Red Cross, municipalities, NGOs, and thousands of citizens who maintain the public lists.
 
-🇻🇪 *La solidaridad es nuestra mayor fuerza.*
+*Solidarity is our greatest strength.*

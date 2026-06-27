@@ -73,7 +73,6 @@
     manifest-src 'self';
     upgrade-insecure-requests;
   " />
-  <meta http-equiv="X-Frame-Options" content="DENY" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=()" />
@@ -2543,7 +2542,7 @@
         .select("id, confirmations")
         .eq("external_source", "caracasayuda")
         .eq("external_id", caId)
-        .single();
+        .maybeSingle();
 
       if (!rec) {
         showStatus("Punto aún no sincronizado — inténtalo en unos minutos", "err", 3500);
@@ -2577,7 +2576,7 @@
         .select("id, fulfill_count")
         .eq("external_source", "caracasayuda")
         .eq("external_id", caId)
-        .single();
+        .maybeSingle();
 
       if (!rec) {
         showStatus("Punto aún no sincronizado con nuestra base de datos. Intenta en unos minutos.", "err", 4000);
