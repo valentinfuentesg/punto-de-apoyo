@@ -69,7 +69,7 @@
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
     img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org;
     font-src 'self' data:;
-    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com https://localizadosvenezuela.com;
+    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com https://localizadosvenezuela.com https://ayudaparavenezuela.com https://caracasayuda.com;
     manifest-src 'self';
     upgrade-insecure-requests;
   " />
@@ -2141,18 +2141,26 @@
       return out;
     }
 
-    function renderCentros(list) {
+    function renderCentros(list, centroSource = "sheets") {
       if (!Array.isArray(list) || !list.length) return 0;
       const cg = getOrCreateCluster("centro");
       let added = 0;
       for (const c of list) {
         const layer = buildCentroLayer(c);
-        const entry = { layer, isCentro: true, category: "centro", report_type: null, created_at: null,
+        const entry = { layer, isCentro: true, centroSource, category: "centro", report_type: null, created_at: null,
                         centroName: (c.org || c.addr || ""), cg };
         markers.push(entry);
         if (matchesFilter(entry, activeFilter)) { cg.addLayer(layer); added++; }
       }
       return added;
+    }
+
+    function clearCentrosBySource(source) {
+      const toRemove = markers.filter(m => m.isCentro && m.centroSource === source);
+      toRemove.forEach(m => { try { map.removeLayer(m.layer); m.cg?.removeLayer(m.layer); } catch {} });
+      for (let i = markers.length - 1; i >= 0; i--) {
+        if (markers[i].isCentro && markers[i].centroSource === source) markers.splice(i, 1);
+      }
     }
 
     async function upsertCentrosToSupabase(list) {
@@ -2186,50 +2194,37 @@
     }
 
     async function loadCentros() {
-      // 1) Si hay caché reciente, úsala YA (paint instantáneo)
+      // Centros estáticos del bundle (siempre — no se pisan con otras fuentes)
+      if (Array.isArray(window.CENTROS) && window.CENTROS.length) {
+        renderCentros(window.CENTROS, "static");
+      }
+
+      // Sheets: caché rápida → refresh en background
       let cached = null;
       try {
         const raw = localStorage.getItem(SHEET_CENTROS.cacheKey);
         if (raw) {
           const obj = JSON.parse(raw);
-          if (obj && Date.now() - obj.t < SHEET_CENTROS.maxAgeMs && Array.isArray(obj.data)) {
-            cached = obj.data;
-          }
+          if (obj && Date.now() - obj.t < SHEET_CENTROS.maxAgeMs && Array.isArray(obj.data)) cached = obj.data;
         }
       } catch {}
 
-      let painted = 0;
-      if (cached) {
-        painted = renderCentros(cached);
-        showStatus(`${painted} centros (caché) · actualizando…`, "ok", 1500);
-      } else if (Array.isArray(window.CENTROS)) {
-        // Sin caché: pinta el bundle estático primero
-        painted = renderCentros(window.CENTROS);
+      if (cached?.length) {
+        clearCentrosBySource("sheets");
+        renderCentros(cached, "sheets");
+        showStatus(`${cached.length} centros · actualizando…`, "ok", 1500);
       }
 
-      // 2) Siempre intenta refrescar desde el Sheet en background
       try {
         const fresh = await fetchSheetCentros();
-        if (fresh.length === 0) throw new Error("Sheet vacío");
+        if (!fresh.length) throw new Error("Sheet vacío");
         try { localStorage.setItem(SHEET_CENTROS.cacheKey, JSON.stringify({ t: Date.now(), data: fresh })); } catch {}
-        // Persistir en Supabase en background (no bloquea el render)
         upsertCentrosToSupabase(fresh).catch(e => console.warn("centros→Supabase:", e.message));
-
-        // Si lo que pintamos antes era distinto, repintamos todo
-        if (painted === 0 || painted !== fresh.length) {
-          // Quitar centros viejos y agregar nuevos
-          const oldCentros = markers.filter(m => m.isCentro);
-          oldCentros.forEach(m => map.removeLayer(m.layer));
-          for (let i = markers.length - 1; i >= 0; i--) if (markers[i].isCentro) markers.splice(i, 1);
-          const n = renderCentros(fresh);
-          showStatus(`${n} centros actualizados desde Google Sheets`, "ok", 2500);
-        }
+        clearCentrosBySource("sheets");
+        renderCentros(fresh, "sheets");
+        showStatus(`${fresh.length} centros desde Google Sheets`, "ok", 2000);
       } catch (err) {
-        console.warn("Sheet fetch falló, uso fallback:", err.message);
-        if (painted === 0 && Array.isArray(window.CENTROS)) {
-          const n = renderCentros(window.CENTROS);
-          showStatus(`${n} centros (modo offline)`, "ok", 2500);
-        }
+        console.warn("Sheet fetch falló:", err.message);
       }
     }
     if (window.requestIdleCallback) requestIdleCallback(loadCentros, { timeout: 500 });
@@ -2291,31 +2286,36 @@
     }
 
     async function loadAPVCentros() {
-      // 1) Caché local primero
       let cached = null;
       try {
         const raw = localStorage.getItem(APV_CACHE);
         if (raw) { const o = JSON.parse(raw); if (Date.now() - o.t < APV_TTL) cached = o.data; }
       } catch {}
+
       if (cached?.length) {
-        renderCentros(cached);
-        // refrescar en background
+        clearCentrosBySource("apv");
+        renderCentros(cached, "apv");
+        // Refresh en background
         fetch(APV_URL).then(r => r.text()).then(txt => {
           const fresh = parseAPVCsv(txt);
           if (!fresh.length) return;
           try { localStorage.setItem(APV_CACHE, JSON.stringify({ t: Date.now(), data: fresh })); } catch {}
+          clearCentrosBySource("apv");
+          renderCentros(fresh, "apv");
           upsertAPVCentrosToSupabase(fresh);
         }).catch(() => {});
         return;
       }
-      // 2) Sin caché — fetch directo
+
       try {
         const res = await fetch(APV_URL);
         if (!res.ok) throw new Error("HTTP " + res.status);
         const fresh = parseAPVCsv(await res.text());
-        if (!fresh.length) return;
+        if (!fresh.length) { console.warn("APV: CSV vacío o sin datos válidos"); return; }
         try { localStorage.setItem(APV_CACHE, JSON.stringify({ t: Date.now(), data: fresh })); } catch {}
-        renderCentros(fresh);
+        clearCentrosBySource("apv");
+        renderCentros(fresh, "apv");
+        console.info(`APV: ${fresh.length} centros pintados`);
         upsertAPVCentrosToSupabase(fresh).catch(() => {});
       } catch (e) {
         console.warn("APV centros: no disponible —", e.message);
