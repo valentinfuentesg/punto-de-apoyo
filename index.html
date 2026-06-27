@@ -1816,12 +1816,12 @@
         if (selectedCategory === "centro_acopio") {
           const name = ($("reporterNameInput")?.value || "").trim();
           const addr = ($("exactAddressInput")?.value || "").trim();
-          if (!name) {
-            showStatus("Ingresa tu nombre y apellido para registrar el centro.", "err", 3500);
+          if (name.length < 2) {
+            showStatus("Ingresa tu nombre y apellido (mínimo 2 caracteres).", "err", 3500);
             $("reporterNameInput")?.focus(); return;
           }
-          if (!addr) {
-            showStatus("Ingresa la dirección exacta del centro de acopio.", "err", 3500);
+          if (addr.length < 5) {
+            showStatus("Ingresa la dirección exacta del centro (mínimo 5 caracteres).", "err", 3500);
             $("exactAddressInput")?.focus(); return;
           }
         }
