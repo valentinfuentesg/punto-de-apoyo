@@ -640,7 +640,7 @@
     .buscar-panel-bg.show { display: flex; }
     .buscar-panel {
       width: 100%; max-width: 480px;
-      background: #111827; border: 1px solid #1f2937; border-radius: 20px;
+      background: var(--panel); border: 1px solid var(--border); border-radius: 20px;
       padding: 20px; box-shadow: 0 -4px 32px rgba(0,0,0,0.5);
     }
     .buscar-panel-header {
@@ -848,6 +848,10 @@
     <div class="chip" data-filter="movilidad">
       <svg viewBox="0 0 24 24" fill="#7c3aed" stroke="#4c1d95" stroke-width="1"><path d="M5 11l1.7-4.7a2 2 0 0 1 1.9-1.3h8.8a2 2 0 0 1 1.9 1.3L21 11v6a1 1 0 0 1-1 1h-1.5a2 2 0 1 1-4 0h-5a2 2 0 1 1-4 0H4a1 1 0 0 1-1-1v-6h2z"/></svg>
       Movilidad
+    </div>
+    <div id="historialChip" class="chip toggle" data-toggle="historial" title="Ver reportes de los últimos 7 días (incluye expirados)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      Historial 7d
     </div>
   </div>
 
@@ -1319,6 +1323,8 @@
     let pendingMarker = null;
     let activeFilter  = "all";   // "all" | "type:offer" | "type:request" | <categoria>
     let selectedType  = "offer"; // "offer" | "request" — tipo elegido en el modal
+    let warnedDup        = false;   // segundo click confirma si ya hay un pin similar cerca
+    let reportWindowHours = 72;     // 72 = activos recientes | 168 = historial 7 días
 
     // marker -> { layer, category, report_type, created_at, cg? }
     const markers = [];
@@ -1475,6 +1481,16 @@
       // Si ya está atendida, no la pintamos en el mapa (la consulta ya filtra is_active)
       if (r.fulfilled_at) return;
 
+      // Dedup render: omitir si ya hay un pin de la misma categoría y tipo a menos de 20m
+      const dupRender = markers.find(m => {
+        if (m.isCentro || m.isHospital || m.category !== r.category || m.report_type !== (r.report_type || "offer")) return false;
+        if (m.lat == null || m.lng == null) return false;
+        const dLat = (r.lat - m.lat) * 111000;
+        const dLng = (r.lng - m.lng) * 111000 * Math.cos(r.lat * Math.PI / 180);
+        return Math.sqrt(dLat*dLat + dLng*dLng) < 20;
+      });
+      if (dupRender) return;
+
       const cat = CATEGORIES[r.category] || { emoji: "📍", label: r.category };
       const type = r.report_type || "offer";
       const tl = typeLabel(type);
@@ -1498,7 +1514,7 @@
           (type === "offer" ? confirmRow(r.id, r.confirmations) : fulfillRow(r.id, r.fulfill_count))
         );
       const cg = getOrCreateCluster(r.category);
-      const entry = { layer, id: r.id, category: r.category, report_type: type, created_at: r.created_at, isCentro: isCentroAcopio, cg };
+      const entry = { layer, id: r.id, lat: r.lat, lng: r.lng, category: r.category, report_type: type, created_at: r.created_at, isCentro: isCentroAcopio, cg };
       markers.push(entry);
       if (matchesFilter(entry, activeFilter)) cg.addLayer(layer);
     }
@@ -1616,6 +1632,24 @@
       applyNearby(!nearbyOnly);
     });
 
+    // Toggle "Historial 7d"
+    $("historialChip")?.addEventListener("click", () => {
+      const chip = $("historialChip");
+      const isOn = chip.classList.toggle("active");
+      reportWindowHours = isOn ? 168 : 72;
+      // Borrar solo marcadores de reportes ciudadanos y recargar
+      for (let i = markers.length - 1; i >= 0; i--) {
+        const m = markers[i];
+        if (!m.isCentro && !m.isHospital) {
+          try { map.removeLayer(m.layer); m.cg?.removeLayer(m.layer); } catch {}
+          markers.splice(i, 1);
+        }
+      }
+      updateHeroStats();
+      loadReports();
+      showStatus(isOn ? "Mostrando reportes de los últimos 7 días" : "Volviendo a vista activa (72h)", "ok", 2500);
+    });
+
     // ============================================================
     // WIZARD DEL MODAL — 3 pasos
     // ============================================================
@@ -1688,20 +1722,18 @@
     // ============================================================
     async function loadReports() {
       if (!sb) return;
-      // OPTIMIZACIÓN DE BANDWIDTH (plan free 5GB Supabase):
-      // 1) Solo columnas necesarias (evita traer client_fp/note extras si pesan).
-      // 2) Solo activos (is_active = true).
-      // solicitudes: 24h · ofrecimientos: 72h (pedimos ventana máxima, filtramos client-side)
-      const since = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+      const isHistorial = reportWindowHours > 72;
+      const since = new Date(Date.now() - reportWindowHours * 60 * 60 * 1000).toISOString();
       const cutoff24h = Date.now() - 24 * 60 * 60 * 1000;
-      const { data: raw, error } = await sb
+      let q = sb
         .from("reports")
         .select("id,lat,lng,category,report_type,note,confirmations,fulfilled_at,fulfill_count,created_at,contact_phone,reporter_name")
-        .eq("is_active", true)
         .gte("created_at", since)
-        .not("source", "eq", "ca")   // CA centros se renderizan desde loadCaracasAyudaPoints(), no duplicar
+        .not("source", "eq", "ca")
         .order("created_at", { ascending: false })
         .limit(1000);
+      if (!isHistorial) q = q.eq("is_active", true); // historial: incluir expirados (si RLS lo permite)
+      const { data: raw, error } = await q;
       const data = raw?.filter(r =>
         r.report_type === "offer"
           ? true                                          // ofrecimientos: 72h (ya filtrado por since)
@@ -1741,6 +1773,10 @@
 
     map.on("click", (e) => {
       if (!reportingMode) return;
+      if (!coordsInVE(e.latlng.lat, e.latlng.lng)) {
+        showStatus("Solo se pueden reportar puntos dentro de Venezuela.", "err", 3500);
+        return;
+      }
       pendingLatLng = e.latlng;
       if (pendingMarker) map.removeLayer(pendingMarker);
       pendingMarker = L.marker(e.latlng, { icon: makeIcon("peligro", selectedType, true) }).addTo(map);
@@ -1750,6 +1786,7 @@
     function resetModalState() {
       selectedCategory = null;
       selectedType = "offer";
+      warnedDup = false;
       if ($("centroFields")) $("centroFields").style.display = "none";
       if ($("noteInput")) $("noteInput").value = "";
       if ($("phoneNumber")) $("phoneNumber").value = "";
@@ -1846,6 +1883,24 @@
         if (!coordsInVE(lat, lng)) {
           showStatus("Coordenadas fuera de Venezuela.", "err", 4000); return;
         }
+
+        // 5) Dedup — ya existe un pin de la misma categoría a menos de 50m
+        if (!warnedDup) {
+          const nearDup = markers.find(m => {
+            if (m.isCentro || m.isHospital || m.category !== selectedCategory) return false;
+            const ll = m.layer?.getLatLng?.();
+            if (!ll) return false;
+            const dLat = (lat - ll.lat) * 111000;
+            const dLng = (lng - ll.lng) * 111000 * Math.cos(lat * Math.PI / 180);
+            return Math.sqrt(dLat*dLat + dLng*dLng) < 50;
+          });
+          if (nearDup) {
+            warnedDup = true;
+            showStatus("Ya hay un punto similar a menos de 50 m. Toca 'Publicar' de nuevo para confirmar.", "err", 5000);
+            return;
+          }
+        }
+        warnedDup = false;
 
         const category = selectedCategory;
         if (!CATEGORIES[category] || !["offer","request"].includes(selectedType)) {
