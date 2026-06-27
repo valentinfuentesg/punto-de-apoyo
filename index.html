@@ -570,7 +570,28 @@
     }
     .hosp-loading { color: var(--muted); font-size: 12px; text-align: center; padding: 12px; }
 
-    /* Tabs Ofrezco / Necesito en el modal */
+    /* Modal wizard */
+    .modal-dots { display:flex; justify-content:center; gap:6px; margin-bottom:14px; }
+    .mdot { width:8px; height:8px; border-radius:50%; background:#374151; transition:all .2s; }
+    .mdot.active { background:var(--accent); width:24px; border-radius:4px; }
+    .mpane { animation: slideUp .18s ease-out; }
+    .modal-title { font-size:16px; font-weight:700; color:#fff; margin-bottom:12px; text-align:center; }
+    .modal-nav { display:flex; justify-content:space-between; align-items:center; margin-top:10px; }
+    .type-tab-big {
+      display:flex; align-items:center; gap:14px;
+      width:100%; padding:16px 14px; border-radius:14px;
+      border:2px solid var(--border); background:#0a0a0a;
+      color:#fff; font-size:15px; font-weight:700; cursor:pointer; text-align:left;
+      transition:border-color .15s, background .15s;
+    }
+    .type-tab-big:hover { background:#111; }
+    .type-tab-big .tab-ico { flex:0 0 44px; height:44px; border-radius:10px;
+      display:flex; align-items:center; justify-content:center; }
+    .type-tab-big.offer  .tab-ico { background:rgba(16,185,129,.15); }
+    .type-tab-big.request .tab-ico { background:rgba(249,115,22,.15); }
+    .type-tab-big small { display:block; font-size:11px; color:var(--muted); font-weight:400; margin-top:2px; }
+
+    /* Tabs Ofrezco / Necesito en el modal (legacy, mantener por compatibilidad) */
     .type-tabs {
       display: flex; gap: 8px; margin-bottom: 14px;
       background: #0a0a0a; padding: 4px; border-radius: 12px;
@@ -967,80 +988,111 @@
 
   <div id="modal" class="modal-bg">
     <div class="modal">
-      <h2>¿Qué quieres reportar?</h2>
-      <div class="type-tabs">
-        <button class="type-tab offer active" data-type="offer">
-          <span class="ttitle">🟢 Ofrezco / Tengo</span>
-          <span class="tsub">Hay este recurso disponible aquí</span>
-        </button>
-        <button class="type-tab request" data-type="request">
-          <span class="ttitle">🟠 Necesito ayuda</span>
-          <span class="tsub">Solicito este recurso aquí</span>
-        </button>
-      </div>
-      <div class="cat-grid">
-        <button class="cat-btn" data-cat="energia" data-allowed="offer,request">
-          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#f59e0b" stroke="#78350f" stroke-width="1"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></span>
-          Energía / Iluminación <small>(plantas, luz, linternas)</small>
-        </button>
-        <button class="cat-btn" data-cat="senal" data-allowed="offer,request">
-          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2.5" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1.5" fill="#1e40af"/></svg></span>
-          Señal / WiFi <small>(Movistar, Digitel, internet)</small>
-        </button>
-        <button class="cat-btn" data-cat="suministros" data-allowed="offer,request">
-          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#0284c7" stroke="#0c4a6e" stroke-width="1"><path d="M12 2.5s7 7.5 7 12.5a7 7 0 1 1-14 0c0-5 7-12.5 7-12.5z"/></svg></span>
-          Suministros <small>(agua, comida, ropa, herramientas, mascotas)</small>
-        </button>
-        <button class="cat-btn" data-cat="asistencia" data-allowed="offer,request">
-          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#dc2626" stroke="#7f1d1d" stroke-width="1"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/></svg></span>
-          Salud / Voluntarios <small>(médica, medicinas, primeros auxilios)</small>
-        </button>
-        <button class="cat-btn" data-cat="movilidad" data-allowed="offer,request">
-          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#7c3aed" stroke="#4c1d95" stroke-width="1"><path d="M5 11l1.7-4.7a2 2 0 0 1 1.9-1.3h8.8a2 2 0 0 1 1.9 1.3L21 11v6a1 1 0 0 1-1 1h-1.5a2 2 0 1 1-4 0h-5a2 2 0 1 1-4 0H4a1 1 0 0 1-1-1v-6h2z"/></svg></span>
-          Movilidad / Transporte <small>(carro, moto, traslado)</small>
-        </button>
-        <button class="cat-btn" data-cat="peligro" data-allowed="request">
-          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#eab308" stroke="#713f12" stroke-width="1"><path d="M12 2L1 22h22L12 2z"/><rect x="11" y="9" width="2" height="6" fill="#713f12"/><circle cx="12" cy="18" r="1" fill="#713f12"/></svg></span>
-          Peligro / Rescate <small>(vía trancada, derrumbe, atrapados)</small>
-        </button>
-        <button class="cat-btn" data-cat="centro_acopio" data-allowed="offer">
-          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#0ea5e9" stroke="#0c4a6e" stroke-width="1"><path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/></svg></span>
-          Centro de acopio <small>(requiere verificación: nombre, dirección, teléfono)</small>
-        </button>
+
+      <!-- Dots -->
+      <div class="modal-dots">
+        <span class="mdot active" id="mdot1"></span>
+        <span class="mdot" id="mdot2"></span>
+        <span class="mdot" id="mdot3"></span>
       </div>
 
-      <!-- Campos obligatorios para TODOS los reportes -->
-      <div id="reqFields" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
-        <input id="phoneInput" type="tel" required maxlength="20" inputmode="tel"
-          placeholder="Teléfono de contacto (obligatorio, ej: +58 412 1234567)"
-          style="width:100%; padding:10px; background:#111; color:#fff; border:1px solid var(--border);
-                 border-radius:10px; font-size:13px; font-family:inherit;" />
+      <!-- Paso 1: Tipo -->
+      <div id="mStep1" class="mpane">
+        <div class="modal-title">¿Qué quieres reportar?</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <button class="type-tab-big offer" data-type="offer">
+            <span class="tab-ico">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="#10b981"><path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/></svg>
+            </span>
+            <span>
+              Ofrece / Tengo
+              <small>Hay este recurso disponible aquí</small>
+            </span>
+          </button>
+          <button class="type-tab-big request" data-type="request">
+            <span class="tab-ico">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="#f97316"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 15a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm1-4h-2V7h2v6z"/></svg>
+            </span>
+            <span>
+              Necesito ayuda
+              <small>Solicito este recurso aquí</small>
+            </span>
+          </button>
+        </div>
       </div>
 
-      <!-- Campos extra SOLO para centro de acopio -->
-      <div id="centroFields" style="display:none; margin-top:8px; flex-direction:column; gap:8px;">
-        <input id="reporterNameInput" type="text" maxlength="80"
-          placeholder="Tu nombre y apellido (quien registra el centro)"
-          style="width:100%; padding:10px; background:#111; color:#fff; border:1px solid var(--border);
-                 border-radius:10px; font-size:13px; font-family:inherit;" />
-        <input id="exactAddressInput" type="text" maxlength="280"
-          placeholder="Dirección exacta del centro (calle, edificio, referencia)"
-          style="width:100%; padding:10px; background:#111; color:#fff; border:1px solid var(--border);
-                 border-radius:10px; font-size:13px; font-family:inherit;" />
+      <!-- Paso 2: Categoría -->
+      <div id="mStep2" class="mpane" style="display:none">
+        <div class="modal-title" id="mStep2Title">¿Qué ofreces?</div>
+        <div class="cat-grid">
+          <button class="cat-btn" data-cat="energia" data-allowed="offer,request">
+            <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#f59e0b" stroke="#78350f" stroke-width="1"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></span>
+            Energía / Iluminación <small>(plantas, luz, linternas)</small>
+          </button>
+          <button class="cat-btn" data-cat="senal" data-allowed="offer,request">
+            <span class="cat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2.5" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1.5" fill="#1e40af"/></svg></span>
+            Señal / WiFi <small>(Movistar, Digitel, internet)</small>
+          </button>
+          <button class="cat-btn" data-cat="suministros" data-allowed="offer,request">
+            <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#0284c7" stroke="#0c4a6e" stroke-width="1"><path d="M12 2.5s7 7.5 7 12.5a7 7 0 1 1-14 0c0-5 7-12.5 7-12.5z"/></svg></span>
+            Suministros <small>(agua, comida, ropa, herramientas, mascotas)</small>
+          </button>
+          <button class="cat-btn" data-cat="asistencia" data-allowed="offer,request">
+            <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#dc2626" stroke="#7f1d1d" stroke-width="1"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/></svg></span>
+            Salud / Voluntarios <small>(médica, medicinas, primeros auxilios)</small>
+          </button>
+          <button class="cat-btn" data-cat="movilidad" data-allowed="offer,request">
+            <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#7c3aed" stroke="#4c1d95" stroke-width="1"><path d="M5 11l1.7-4.7a2 2 0 0 1 1.9-1.3h8.8a2 2 0 0 1 1.9 1.3L21 11v6a1 1 0 0 1-1 1h-1.5a2 2 0 1 1-4 0h-5a2 2 0 1 1-4 0H4a1 1 0 0 1-1-1v-6h2z"/></svg></span>
+            Movilidad / Transporte <small>(carro, moto, traslado)</small>
+          </button>
+          <button class="cat-btn" data-cat="peligro" data-allowed="request">
+            <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#eab308" stroke="#713f12" stroke-width="1"><path d="M12 2L1 22h22L12 2z"/><rect x="11" y="9" width="2" height="6" fill="#713f12"/><circle cx="12" cy="18" r="1" fill="#713f12"/></svg></span>
+            Peligro / Rescate <small>(vía trancada, derrumbe, atrapados)</small>
+          </button>
+          <button class="cat-btn" data-cat="centro_acopio" data-allowed="offer">
+            <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#0ea5e9" stroke="#0c4a6e" stroke-width="1"><path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/></svg></span>
+            Centro de acopio <small>(nombre, dirección y teléfono obligatorios)</small>
+          </button>
+        </div>
       </div>
 
-      <textarea id="noteInput" placeholder="Nota opcional (ej: hora, detalles)…"
-        maxlength="280" rows="2"
-        style="width:100%; margin-top:10px; padding:10px; background:#111; color:#fff;
-               border:1px solid var(--border); border-radius:10px; font-size:13px;
-               font-family:inherit; resize:none; min-height:50px;"></textarea>
-      <div style="display:flex; gap:8px; margin-top:10px;">
-        <button class="cancel-btn" id="modalCancel" style="flex:1;">Cancelar</button>
-        <button id="submitBtn" style="flex:2; padding:12px; border-radius:10px; background:var(--accent);
-          color:#fff; border:none; font-size:14px; font-weight:700; cursor:pointer; opacity:0.4; pointer-events:none;">
-          Publicar punto
-        </button>
+      <!-- Paso 3: Info -->
+      <div id="mStep3" class="mpane" style="display:none">
+        <div class="modal-title" id="mStep3Title">Tu información</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <input id="phoneInput" type="tel" maxlength="20" inputmode="tel"
+            placeholder="Teléfono de contacto (+58 412 1234567)"
+            style="width:100%; padding:10px; background:#111; color:#fff; border:1px solid var(--border);
+                   border-radius:10px; font-size:13px; font-family:inherit; box-sizing:border-box;" />
+          <div id="centroFields" style="display:none; flex-direction:column; gap:8px;">
+            <input id="reporterNameInput" type="text" maxlength="80"
+              placeholder="Tu nombre y apellido (quien registra)"
+              style="width:100%; padding:10px; background:#111; color:#fff; border:1px solid var(--border);
+                     border-radius:10px; font-size:13px; font-family:inherit; box-sizing:border-box;" />
+            <input id="exactAddressInput" type="text" maxlength="280"
+              placeholder="Dirección exacta (calle, edificio, referencia)"
+              style="width:100%; padding:10px; background:#111; color:#fff; border:1px solid var(--border);
+                     border-radius:10px; font-size:13px; font-family:inherit; box-sizing:border-box;" />
+          </div>
+          <textarea id="noteInput" placeholder="Nota opcional (horario, detalles…)"
+            maxlength="280" rows="2"
+            style="width:100%; padding:10px; background:#111; color:#fff;
+                   border:1px solid var(--border); border-radius:10px; font-size:13px;
+                   font-family:inherit; resize:none; min-height:50px; box-sizing:border-box;"></textarea>
+          <button id="submitBtn"
+            style="width:100%; padding:13px; border-radius:10px; background:var(--accent);
+                   color:#fff; border:none; font-size:15px; font-weight:700; cursor:pointer;">
+            Publicar punto
+          </button>
+        </div>
       </div>
+
+      <!-- Nav -->
+      <div class="modal-nav">
+        <button id="modalBack" class="cancel-btn" style="display:none; padding:8px 4px;">← Volver</button>
+        <button id="modalCancel" class="cancel-btn">Cancelar</button>
+      </div>
+
     </div>
   </div>
 
@@ -1511,38 +1563,68 @@
       applyNearby(!nearbyOnly);
     });
 
-    // Tabs de tipo (Ofrezco / Necesito) dentro del modal
-    function setType(t) {
-      selectedType = t;
-      document.querySelectorAll(".type-tab").forEach(tab =>
-        tab.classList.toggle("active", tab.dataset.type === t)
-      );
-      // Mostrar solo categorías permitidas para este tipo (oculta peligro en offer,
-      // oculta centro_acopio en request, etc.)
-      document.querySelectorAll(".cat-btn[data-allowed]").forEach(btn => {
-        const allowed = (btn.dataset.allowed || "").split(",");
-        btn.style.display = allowed.includes(t) ? "" : "none";
+    // ============================================================
+    // WIZARD DEL MODAL — 3 pasos
+    // ============================================================
+    let modalStep = 1;
+
+    function setModalStep(step) {
+      modalStep = step;
+      ["mStep1","mStep2","mStep3"].forEach((id, i) => {
+        const el = $(id);
+        if (el) el.style.display = step === i + 1 ? "" : "none";
       });
-      // Si la categoría centro_acopio queda visible, mostrar sus campos extra al hover/click
-      const centroBtn = document.querySelector('.cat-btn[data-cat="centro_acopio"]');
-      const centroFields = document.getElementById("centroFields");
-      if (centroBtn && centroFields) {
-        // El panel extra solo se muestra cuando el usuario clickee centro (handler abajo)
-        if (centroBtn.style.display === "none") centroFields.style.display = "none";
-      }
-      // Actualizar color del FAB si está activo en modo cancelar
-      if (reportingMode) {
-        fab.classList.remove("offer", "request");
-        fab.classList.add(t);
-      }
-      // Actualizar pin pendiente si ya está puesto
-      if (pendingMarker && pendingLatLng) {
-        pendingMarker.setIcon(makeIcon("peligro", t, true));
-      }
+      // dots
+      document.querySelectorAll(".mdot").forEach((d, i) => {
+        d.classList.toggle("active", i < step);
+      });
+      // back button
+      const backBtn = $("modalBack");
+      if (backBtn) backBtn.style.display = step > 1 ? "" : "none";
     }
-    document.querySelectorAll(".type-tab").forEach(tab =>
-      tab.addEventListener("click", () => setType(tab.dataset.type))
-    );
+
+    // Paso 1 → tipo seleccionado
+    document.querySelectorAll(".type-tab-big").forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedType = btn.dataset.type;
+        // Filtrar categorías según tipo
+        document.querySelectorAll(".cat-btn[data-allowed]").forEach(b => {
+          const allowed = (b.dataset.allowed || "").split(",");
+          b.style.display = allowed.includes(selectedType) ? "" : "none";
+        });
+        const label = $("mStep2Title");
+        if (label) label.textContent = selectedType === "offer" ? "¿Qué ofreces?" : "¿Qué necesitas?";
+        if (reportingMode) {
+          fab.classList.remove("offer","request");
+          fab.classList.add(selectedType);
+        }
+        setModalStep(2);
+      });
+    });
+
+    // Paso 2 → categoría seleccionada
+    document.querySelectorAll(".cat-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedCategory = btn.dataset.cat;
+        const catLabel = CATEGORIES[selectedCategory]?.label || selectedCategory;
+        const typeLabel = selectedType === "offer" ? "Ofrece" : "Solicita";
+        const title = $("mStep3Title");
+        if (title) title.textContent = `${typeLabel}: ${catLabel}`;
+        const centroFields = $("centroFields");
+        if (centroFields) centroFields.style.display = selectedCategory === "centro_acopio" ? "flex" : "none";
+        if (pendingMarker && pendingLatLng) {
+          pendingMarker.setIcon(makeIcon(selectedCategory, selectedType, true));
+        }
+        setModalStep(3);
+        setTimeout(() => $("phoneInput")?.focus(), 80);
+      });
+    });
+
+    // Volver
+    $("modalBack")?.addEventListener("click", () => {
+      if (modalStep === 3) { setModalStep(2); selectedCategory = null; }
+      else if (modalStep === 2) { setModalStep(1); selectedType = "offer"; }
+    });
 
     // ============================================================
     // 5. CARGAR REPORTES
@@ -1589,10 +1671,7 @@
       hideToast();
       map.getContainer().style.cursor = "";
       if (pendingMarker) { map.removeLayer(pendingMarker); pendingMarker = null; }
-      $("noteInput").value = "";
-      if ($("phoneInput")) $("phoneInput").value = "";
-      if ($("reporterNameInput")) $("reporterNameInput").value = "";
-      if ($("exactAddressInput")) $("exactAddressInput").value = "";
+      resetModalState();
     }
 
     fab.addEventListener("click", () => reportingMode ? exitReportingMode() : enterReportingMode());
@@ -1607,14 +1686,13 @@
 
     function resetModalState() {
       selectedCategory = null;
-      document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("selected"));
-      const centroFields = $("centroFields");
-      if (centroFields) centroFields.style.display = "none";
-      $("noteInput").value = "";
-      $("phoneInput").value = "";
+      selectedType = "offer";
+      if ($("centroFields")) $("centroFields").style.display = "none";
+      if ($("noteInput")) $("noteInput").value = "";
+      if ($("phoneInput")) $("phoneInput").value = "";
       if ($("reporterNameInput")) $("reporterNameInput").value = "";
       if ($("exactAddressInput")) $("exactAddressInput").value = "";
-      updateSubmitBtn();
+      setModalStep(1);
     }
 
     function closeModalKeepMarker() {
@@ -1654,28 +1732,6 @@
     }
 
     let selectedCategory = null;
-
-    function updateSubmitBtn() {
-      const btn = $("submitBtn");
-      if (!btn) return;
-      const enabled = !!selectedCategory;
-      btn.style.opacity = enabled ? "1" : "0.4";
-      btn.style.pointerEvents = enabled ? "auto" : "none";
-    }
-
-    document.querySelectorAll(".cat-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("selected"));
-        btn.classList.add("selected");
-        selectedCategory = btn.dataset.cat;
-        // Mostrar campos extra solo para centro de acopio
-        const centroFields = $("centroFields");
-        if (centroFields) {
-          centroFields.style.display = selectedCategory === "centro_acopio" ? "flex" : "none";
-        }
-        updateSubmitBtn();
-      });
-    });
 
     $("submitBtn")?.addEventListener("click", async () => {
         if (!pendingLatLng || !sb) { modal.classList.remove("show"); return; }
