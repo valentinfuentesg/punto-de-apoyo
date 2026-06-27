@@ -106,7 +106,8 @@ declare
   cnt_min int;
   cnt_hr  int;
 begin
-  if new.client_fp is null then return new; end if;
+  -- fuentes externas (CA sync) no cuentan para el rate limit
+  if new.client_fp is null or new.source = 'ca' then return new; end if;
 
   select count(*) into cnt_min
   from public.reports
