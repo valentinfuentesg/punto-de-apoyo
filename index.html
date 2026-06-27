@@ -1652,16 +1652,21 @@
       // OPTIMIZACIÓN DE BANDWIDTH (plan free 5GB Supabase):
       // 1) Solo columnas necesarias (evita traer client_fp/note extras si pesan).
       // 2) Solo activos (is_active = true).
-      // 3) Solo últimas 48h.
-      // 4) Tope duro de 1000 filas (en pico masivo no descarga más).
-      const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-      const { data, error } = await sb
+      // solicitudes: 24h · ofrecimientos: 72h (pedimos ventana máxima, filtramos client-side)
+      const since = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+      const cutoff24h = Date.now() - 24 * 60 * 60 * 1000;
+      const { data: raw, error } = await sb
         .from("reports")
         .select("id,lat,lng,category,report_type,note,confirmations,fulfilled_at,fulfill_count,created_at,contact_phone")
         .eq("is_active", true)
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(1000);
+      const data = raw?.filter(r =>
+        r.report_type === "offer"
+          ? true                                          // ofrecimientos: 72h (ya filtrado por since)
+          : new Date(r.created_at).getTime() > cutoff24h // solicitudes: 24h
+      );
 
       if (error) {
         showStatus("Error al cargar: " + error.message, "err", 5000);
@@ -2716,7 +2721,7 @@
         .maybeSingle();
 
       if (!rec) {
-        showStatus("Punto aún no sincronizado — inténtalo en unos minutos", "err", 3500);
+        showStatus("Para confirmar puntos de CaracasAyuda debes ejecutar el índice SQL de sincronización (ver supabase_setup.sql sección 7).", "err", 5000);
         btn.disabled = false; btn.textContent = "Confirmar";
         return;
       }
@@ -2750,7 +2755,7 @@
         .maybeSingle();
 
       if (!rec) {
-        showStatus("Punto aún no sincronizado con nuestra base de datos. Intenta en unos minutos.", "err", 4000);
+        showStatus("Para marcar puntos de CaracasAyuda debes ejecutar el índice SQL de sincronización (ver supabase_setup.sql sección 7).", "err", 5000);
         return;
       }
 
