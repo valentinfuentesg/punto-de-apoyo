@@ -653,11 +653,11 @@
     .buscar-link-card {
       display: flex; align-items: center; gap: 12px;
       padding: 12px 14px; border-radius: 12px;
-      background: #1e293b; border: 1px solid #334155;
+      background: #111; border: 1px solid var(--border);
       color: #e2e8f0; text-decoration: none; font-size: 13px;
       margin-bottom: 8px; transition: border-color .15s, background .15s;
     }
-    .buscar-link-card:hover { border-color: #60a5fa; background: #243044; }
+    .buscar-link-card:hover { border-color: #444; background: #1a1a1a; }
     .buscar-link-card .blc-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .buscar-link-card .blc-text { flex: 1; }
     .buscar-link-card .blc-title { font-weight: 700; color: #f1f5f9; display: block; }
@@ -985,19 +985,19 @@
         <span class="blc-arrow">›</span>
       </a>
 
-      <div style="margin-top:14px;border-top:1px solid #1f2937;padding-top:14px;">
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
         <p style="color:#94a3b8;font-size:12px;margin:0 0 10px;font-weight:600;">EMERGENCIAS — toca para llamar</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-          <a href="tel:171" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:10px;text-decoration:none;">
+          <a href="tel:171" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#111;border:1px solid var(--border);border-radius:10px;text-decoration:none;">
             <span style="color:#94a3b8;font-size:11px;">CANTV</span><span style="color:#f1f5f9;font-weight:700;font-size:15px;">171</span>
           </a>
-          <a href="tel:*1" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:10px;text-decoration:none;">
+          <a href="tel:*1" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#111;border:1px solid var(--border);border-radius:10px;text-decoration:none;">
             <span style="color:#94a3b8;font-size:11px;">Movilnet</span><span style="color:#f1f5f9;font-weight:700;font-size:15px;">*1</span>
           </a>
-          <a href="tel:112" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:10px;text-decoration:none;">
+          <a href="tel:112" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#111;border:1px solid var(--border);border-radius:10px;text-decoration:none;">
             <span style="color:#94a3b8;font-size:11px;">Digitel</span><span style="color:#f1f5f9;font-weight:700;font-size:15px;">112</span>
           </a>
-          <a href="tel:911" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:10px;text-decoration:none;">
+          <a href="tel:911" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#111;border:1px solid var(--border);border-radius:10px;text-decoration:none;">
             <span style="color:#94a3b8;font-size:11px;">Movistar</span><span style="color:#f1f5f9;font-weight:700;font-size:15px;">911</span>
           </a>
         </div>
@@ -1640,7 +1640,7 @@
       // Borrar solo marcadores de reportes ciudadanos y recargar
       for (let i = markers.length - 1; i >= 0; i--) {
         const m = markers[i];
-        if (!m.isCentro && !m.isHospital) {
+        if (!m.isCentro && !m.isHospital && !m.isExternal) {
           try { map.removeLayer(m.layer); m.cg?.removeLayer(m.layer); } catch {}
           markers.splice(i, 1);
         }
@@ -1878,10 +1878,32 @@
           showStatus(`Espera ${wait}s antes de otro reporte`, "err", 2500); return;
         }
 
-        // 4) Coordenadas dentro de Venezuela
+        // 4) Coordenadas dentro de Venezuela (bbox rápido + reverse geocode confiable)
         const lat = pendingLatLng.lat, lng = pendingLatLng.lng;
         if (!coordsInVE(lat, lng)) {
           showStatus("Coordenadas fuera de Venezuela.", "err", 4000); return;
+        }
+        // Reverse geocode para detectar mar / país vecino dentro del bbox
+        try {
+          const ctrl = new AbortController();
+          const geoTimeout = setTimeout(() => ctrl.abort(), 3500);
+          showStatus("Verificando ubicación…", "ok", 3500);
+          const rv = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=5`,
+            { headers: { "User-Agent": "PuntoDeApoyoVenezuela/1.0" }, signal: ctrl.signal }
+          );
+          clearTimeout(geoTimeout);
+          const rj = await rv.json();
+          const cc = rj?.address?.country_code;
+          if (cc && cc !== "ve") {
+            showStatus("Solo puedes reportar puntos dentro de Venezuela.", "err", 4000); return;
+          }
+          if (!cc && !rj?.address) {
+            // Sin dirección = probablemente mar abierto
+            showStatus("Ese punto parece estar en el mar. Selecciona una ubicación en tierra.", "err", 4000); return;
+          }
+        } catch {
+          // Timeout o sin red — el bbox ya filtró los casos obvios, dejar continuar
         }
 
         // 5) Dedup — ya existe un pin de la misma categoría a menos de 50m
@@ -2655,7 +2677,6 @@
 
       const existingCentros = markers.filter(m => m.isCentro && m.layer?.getLatLng);
       const existingCentroKeys = new Set(existingCentros.map(m => normalizeHospName(m.centroName || "")));
-      const existingReports = markers.filter(m => !m.isCentro && !m.isHospital && m.layer && m.layer.getLatLng);
 
       let addedR = 0, skipped = 0;
       for (const p of points) {
@@ -2666,9 +2687,10 @@
         // centros se omiten — fuente única es APV
         if (mapped === undefined || mapped === null || mapped === "_centro") { skipped++; continue; }
 
-        // Dedup contra reportes nuestros cercanos en la misma categoría
-        const dup = existingReports.some(m => {
-          if (m.category !== mapped) return false;
+        // Dedup contra todos los reportes ya en mapa (incluye CA-vs-CA y CA-vs-user)
+        const dup = markers.some(m => {
+          if (m.isCentro || m.isHospital || m.category !== mapped) return false;
+          if (!m.layer?.getLatLng) return false;
           const ll = m.layer.getLatLng();
           return isCloseTo(p.lat, p.lng, ll.lat, ll.lng);
         });
