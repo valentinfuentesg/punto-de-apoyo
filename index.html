@@ -613,6 +613,53 @@
     .fab.offer   { background: #10b981; box-shadow: 0 8px 24px rgba(16,185,129,0.45); }
     .fab.request { background: #f97316; box-shadow: 0 8px 24px rgba(249,115,22,0.45); }
 
+    /* Botón "Buscar persona" */
+    .buscar-btn {
+      position: absolute; top: 14px; right: 52px; z-index: 500;
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 12px; border-radius: 20px;
+      background: #1e293b; border: 1.5px solid #475569;
+      color: #e2e8f0; font-size: 13px; font-weight: 600;
+      cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      font-family: inherit; transition: background .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .buscar-btn:hover { background: #334155; border-color: #60a5fa; }
+    .buscar-btn svg { flex-shrink: 0; }
+
+    /* Panel "Buscar persona" */
+    .buscar-panel-bg {
+      display: none; position: fixed; inset: 0; z-index: 1200;
+      background: rgba(0,0,0,0.6); align-items: flex-end; justify-content: center;
+      padding: 16px;
+    }
+    .buscar-panel-bg.show { display: flex; }
+    .buscar-panel {
+      width: 100%; max-width: 480px;
+      background: #111827; border: 1px solid #1f2937; border-radius: 20px;
+      padding: 20px; box-shadow: 0 -4px 32px rgba(0,0,0,0.5);
+    }
+    .buscar-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .buscar-panel-header h3 { margin: 0; font-size: 16px; color: #f1f5f9; font-weight: 700; }
+    .buscar-panel-header button { background: none; border: none; color: #9ca3af; font-size: 20px; cursor: pointer; padding: 0; line-height: 1; }
+    .buscar-panel p { color: #94a3b8; font-size: 13px; margin: 0 0 14px; }
+    .buscar-link-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 12px;
+      background: #1e293b; border: 1px solid #334155;
+      color: #e2e8f0; text-decoration: none; font-size: 13px;
+      margin-bottom: 8px; transition: border-color .15s, background .15s;
+    }
+    .buscar-link-card:hover { border-color: #60a5fa; background: #243044; }
+    .buscar-link-card .blc-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .buscar-link-card .blc-text { flex: 1; }
+    .buscar-link-card .blc-title { font-weight: 700; color: #f1f5f9; display: block; }
+    .buscar-link-card .blc-sub { color: #94a3b8; font-size: 11px; }
+    .buscar-link-card .blc-arrow { color: #475569; font-size: 18px; }
+
     /* Leyenda — oculta: la stats-bar ya muestra ofrecen/solicitan */
     .legend { display: none !important; }
 
@@ -670,22 +717,21 @@
       <p class="sub">Mapa colaborativo de emergencia</p>
 
       <div class="onboard-step active" data-step="0">
-        <div class="icon" style="gap:10px;">
-          <!-- Pin centro de acopio — mismo icono que en el mapa -->
-          <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="26" cy="26" r="26" fill="#0ea5e9" opacity="0.14"/>
-            <circle cx="26" cy="26" r="18" fill="#0ea5e9" stroke="rgba(255,255,255,0.85)" stroke-width="2.5"/>
-            <path d="M26 35s-8-4.8-10-10.2C14.5 21 17 18.5 19.5 18.5c1.5 0 2.8.8 3.8 2 1-1.2 2.3-2 3.7-2 2.5 0 5 2.5 3.8 6.3C29 29.2 26 35 26 35z" fill="#fff"/>
-          </svg>
-          <!-- Pin hospital — mismo icono que en el mapa -->
-          <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="26" cy="26" r="26" fill="#dc2626" opacity="0.14"/>
-            <circle cx="26" cy="26" r="18" fill="#dc2626" stroke="rgba(255,255,255,0.85)" stroke-width="2.5"/>
-            <rect x="19" y="22" width="14" height="8" rx="1" fill="#fff"/>
-            <rect x="23" y="18" width="6" height="3" rx="1" fill="#fff"/>
-            <rect x="24" y="24" width="4" height="1.5" rx="0.5" fill="#dc2626"/>
-            <rect x="25.25" y="22.75" width="1.5" height="4" rx="0.5" fill="#dc2626"/>
-          </svg>
+        <div class="icon" style="gap:14px;">
+          <!-- Pin centro de acopio — idéntico al del mapa (pin-badge centro) -->
+          <div class="pin-badge centro" style="width:52px;height:52px;border-width:4px;">
+            <svg viewBox="0 0 24 24" style="width:26px;height:26px;" fill="#0ea5e9" stroke="#0c4a6e" stroke-width="1" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/>
+            </svg>
+          </div>
+          <!-- Pin hospital — idéntico al del mapa (pin-badge hospital) -->
+          <div class="pin-badge hospital" style="width:52px;height:52px;border-width:4px;">
+            <svg viewBox="0 0 24 24" style="width:26px;height:26px;" fill="#dc2626" stroke="#7f1d1d" stroke-width="1" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="6" width="18" height="14" rx="1"/>
+              <path d="M11 9h2v3h3v2h-3v3h-2v-3H8v-2h3z" fill="#fff"/>
+              <path d="M9 6V3h6v3" stroke="#7f1d1d" stroke-width="1" fill="none"/>
+            </svg>
+          </div>
         </div>
         <h3>Centros de acopio y hospitales</h3>
         <p>Los pines <strong style="color:#0ea5e9">azules</strong> son centros que reciben donaciones. Los pines <strong style="color:#dc2626">rojos</strong> son hospitales con heridos. Toca uno para ver contacto y cómo llegar.</p>
@@ -800,6 +846,11 @@
       Movilidad
     </div>
   </div>
+
+  <button id="buscarBtn" class="buscar-btn" aria-label="Buscar persona desaparecida">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/><circle cx="11" cy="9" r="2" fill="#60a5fa" stroke="none"/></svg>
+    Buscar persona
+  </button>
 
   <button id="infoBtn" class="info-btn" title="Información y emergencias" aria-label="Información y emergencias">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -979,6 +1030,57 @@
   </div>
 
   <div id="toast" class="toast">Toca el mapa donde quieras reportar</div>
+  <!-- Panel "Buscar persona desaparecida" -->
+  <div id="buscarPanel" class="buscar-panel-bg">
+    <div class="buscar-panel">
+      <div class="buscar-panel-header">
+        <h3>🔍 Buscar persona</h3>
+        <button id="buscarClose" aria-label="Cerrar">✕</button>
+      </div>
+      <p>Plataformas con registros de personas desaparecidas, hospitalizadas o localizadas tras el sismo.</p>
+      <a class="buscar-link-card" href="https://venezuelareporta.org" target="_blank" rel="noopener noreferrer">
+        <div class="blc-icon" style="background:#1e3a5f;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+        </div>
+        <div class="blc-text">
+          <span class="blc-title">venezuelareporta.org</span>
+          <span class="blc-sub">61,000+ reportes · 5,800+ localizados</span>
+        </div>
+        <span class="blc-arrow">›</span>
+      </a>
+      <a class="buscar-link-card" href="https://aquiestoy.xyz" target="_blank" rel="noopener noreferrer">
+        <div class="blc-icon" style="background:#1a3a2a;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><path d="M12 22s-7-7.5-7-13a7 7 0 1 1 14 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        </div>
+        <div class="blc-text">
+          <span class="blc-title">aquiestoy.xyz</span>
+          <span class="blc-sub">5,800+ hospitalizados en 9 centros</span>
+        </div>
+        <span class="blc-arrow">›</span>
+      </a>
+      <a class="buscar-link-card" href="https://desaparecidosvenezuela.com" target="_blank" rel="noopener noreferrer">
+        <div class="blc-icon" style="background:#3a1e1e;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="blc-text">
+          <span class="blc-title">desaparecidosvenezuela.com</span>
+          <span class="blc-sub">1,200+ reportes con foto</span>
+        </div>
+        <span class="blc-arrow">›</span>
+      </a>
+      <a class="buscar-link-card" href="https://tebusco.app" target="_blank" rel="noopener noreferrer">
+        <div class="blc-icon" style="background:#2d1a3a;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </div>
+        <div class="blc-text">
+          <span class="blc-title">tebusco.app</span>
+          <span class="blc-sub">Base offline, sync automático</span>
+        </div>
+        <span class="blc-arrow">›</span>
+      </a>
+    </div>
+  </div>
+
   <div id="status" class="status"></div>
 
   <button id="locateBtn" class="locate-btn" title="Mi ubicación">
@@ -2196,6 +2298,12 @@
     else setTimeout(loadCentros, 50);
 
     // ============================================================
+    // PANEL "BUSCAR PERSONA"
+    const buscarPanel = $("buscarPanel");
+    $("buscarBtn").addEventListener("click", () => buscarPanel.classList.add("show"));
+    $("buscarClose").addEventListener("click", () => buscarPanel.classList.remove("show"));
+    buscarPanel.addEventListener("click", (e) => { if (e.target === buscarPanel) buscarPanel.classList.remove("show"); });
+
     // INFO MODAL (Sobre / Privacidad / Términos / Emergencias)
     // ============================================================
     const infoModal = $("infoModal");

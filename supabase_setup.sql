@@ -370,9 +370,11 @@ alter table public.reports add column if not exists external_id text;
 alter table public.reports add column if not exists external_source text;
 
 -- REQUIRED: unique index to enable ON CONFLICT upserts from external sync
+-- IMPORTANT: must NOT have a WHERE clause — PostgREST requires a non-partial index
+-- NULL values are always distinct in PostgreSQL unique indexes, so user rows (both NULL) never conflict
+drop index if exists public.reports_external_idx;
 create unique index if not exists reports_external_idx
-  on public.reports(external_source, external_id)
-  where external_source is not null and external_id is not null;
+  on public.reports(external_source, external_id);
 
 -- UPDATE policy for external sync rows (needed for upsert ON CONFLICT updates)
 drop policy if exists "anon_update_external" on public.reports;
