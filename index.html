@@ -1477,7 +1477,10 @@
       const cat = CATEGORIES[r.category] || { emoji: "📍", label: r.category };
       const type = r.report_type || "offer";
       const tl = typeLabel(type);
-      const note = r.note ? `<br><span style="color:#fff">${escapeHtml(r.note)}</span>` : "";
+      const note = r.note ? `<br><span style="color:#cbd5e1">${escapeHtml(r.note)}</span>` : "";
+      const reporterHtml = (r.category === "centro_acopio" && r.reporter_name)
+        ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px;">Registrado por: ${escapeHtml(r.reporter_name)}</div>`
+        : "";
       const phoneHtml = r.contact_phone
         ? `<div style="font-size:12px;margin-top:4px;"><b>Contacto:</b> ${renderContacto(r.contact_phone)}</div>`
         : "";
@@ -1488,7 +1491,7 @@
         .bindPopup(
           `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
           `<b style="display:inline-flex;align-items:center;gap:5px;">${cat.svg}<span>${cat.label}</span></b>${note}` +
-          phoneHtml +
+          reporterHtml + phoneHtml +
           `<br><small>${timeAgo(r.created_at)}</small><br>` +
           gmapsLink(r.lat, r.lng) + waShareButton(waText) +
           (type === "offer" ? confirmRow(r.id, r.confirmations) : fulfillRow(r.id, r.fulfill_count))
@@ -1661,6 +1664,10 @@
         if (title) title.textContent = `${typeLabel}: ${catLabel}`;
         const centroFields = $("centroFields");
         if (centroFields) centroFields.style.display = selectedCategory === "centro_acopio" ? "flex" : "none";
+        const noteEl = $("noteInput");
+        if (noteEl) noteEl.placeholder = selectedCategory === "centro_acopio"
+          ? "¿Qué aceptan o qué tienen disponible? (ej: agua, ropa, alimentos, medicinas)"
+          : "Nota opcional (horario, detalles…)";
         if (pendingMarker && pendingLatLng) {
           pendingMarker.setIcon(makeIcon(selectedCategory, selectedType, true));
         }
@@ -1688,7 +1695,7 @@
       const cutoff24h = Date.now() - 24 * 60 * 60 * 1000;
       const { data: raw, error } = await sb
         .from("reports")
-        .select("id,lat,lng,category,report_type,note,confirmations,fulfilled_at,fulfill_count,created_at,contact_phone")
+        .select("id,lat,lng,category,report_type,note,confirmations,fulfilled_at,fulfill_count,created_at,contact_phone,reporter_name")
         .eq("is_active", true)
         .gte("created_at", since)
         .not("source", "eq", "ca")   // CA centros se renderizan desde loadCaracasAyudaPoints(), no duplicar
