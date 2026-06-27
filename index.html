@@ -1477,9 +1477,9 @@
       </div>`;
     }
 
-    function addReportToMap(r) {
-      // Si ya está atendida, no la pintamos en el mapa (la consulta ya filtra is_active)
-      if (r.fulfilled_at) return;
+    function addReportToMap(r, isExpired = false) {
+      // En modo normal omitir fulfilled; en historial mostrarlos (info de qué se resolvió)
+      if (!isExpired && r.fulfilled_at) return;
 
       // Dedup render: omitir si ya hay un pin de la misma categoría y tipo a menos de 20m
       const dupRender = markers.find(m => {
@@ -1501,20 +1501,24 @@
       const phoneHtml = r.contact_phone
         ? `<div style="font-size:12px;margin-top:4px;"><b>Contacto:</b> ${renderContacto(r.contact_phone)}</div>`
         : "";
+      const expiredBadge = isExpired
+        ? `<span style="display:inline-block;background:#374151;color:#9ca3af;font-size:10px;padding:1px 6px;border-radius:999px;margin-left:4px;">Expirado</span>`
+        : "";
       const waText = `${tl.txt}: ${cat.label}\n${r.note ? r.note + "\n" : ""}${r.contact_phone ? "Tel: " + r.contact_phone + "\n" : ""}Ubicación: ${gmapsUrl(r.lat, r.lng)}\n\nMás info en ${SITE_URL}`;
       const isCentroAcopio = r.category === "centro_acopio";
+      // Pines expirados: opacidad reducida para distinguirlos visualmente
       const icon = isCentroAcopio ? makeCentroIcon() : makeIcon(r.category, type);
-      const layer = L.marker([r.lat, r.lng], { icon })
+      const layer = L.marker([r.lat, r.lng], { icon, opacity: isExpired ? 0.45 : 1 })
         .bindPopup(
-          `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
+          `<span class="popup-badge ${tl.cls}">${tl.txt}</span>${expiredBadge}<br>` +
           `<b style="display:inline-flex;align-items:center;gap:5px;">${cat.svg}<span>${cat.label}</span></b>${note}` +
           reporterHtml + phoneHtml +
           `<br><small>${timeAgo(r.created_at)}</small><br>` +
-          gmapsLink(r.lat, r.lng) + waShareButton(waText) +
-          (type === "offer" ? confirmRow(r.id, r.confirmations) : fulfillRow(r.id, r.fulfill_count))
+          (isExpired ? "" : gmapsLink(r.lat, r.lng) + waShareButton(waText) +
+            (type === "offer" ? confirmRow(r.id, r.confirmations) : fulfillRow(r.id, r.fulfill_count)))
         );
       const cg = getOrCreateCluster(r.category);
-      const entry = { layer, id: r.id, lat: r.lat, lng: r.lng, category: r.category, report_type: type, created_at: r.created_at, isCentro: isCentroAcopio, cg };
+      const entry = { layer, id: r.id, lat: r.lat, lng: r.lng, category: r.category, report_type: type, created_at: r.created_at, isCentro: isCentroAcopio, isExpired, cg };
       markers.push(entry);
       if (matchesFilter(entry, activeFilter)) cg.addLayer(layer);
     }
@@ -1637,17 +1641,9 @@
       const chip = $("historialChip");
       const isOn = chip.classList.toggle("active");
       reportWindowHours = isOn ? 168 : 72;
-      // Borrar solo marcadores de reportes ciudadanos y recargar
-      for (let i = markers.length - 1; i >= 0; i--) {
-        const m = markers[i];
-        if (!m.isCentro && !m.isHospital && !m.isExternal) {
-          try { map.removeLayer(m.layer); m.cg?.removeLayer(m.layer); } catch {}
-          markers.splice(i, 1);
-        }
-      }
-      updateHeroStats();
-      loadReports();
-      showStatus(isOn ? "Mostrando reportes de los últimos 7 días" : "Volviendo a vista activa (72h)", "ok", 2500);
+      // loadReports() ya limpia y recarga — no hace falta limpiar aquí
+      loadReports().then(updateHeroStats);
+      showStatus(isOn ? "Mostrando últimos 7 días (incluye expirados)" : "Volviendo a vista activa (72h)", "ok", 2500);
     });
 
     // ============================================================
@@ -1722,29 +1718,48 @@
     // ============================================================
     async function loadReports() {
       if (!sb) return;
+
+      // Limpiar reportes ciudadanos antes de recargar — evita acumulación en toggles
+      for (let i = markers.length - 1; i >= 0; i--) {
+        const m = markers[i];
+        if (!m.isCentro && !m.isHospital && !m.isExternal) {
+          try { map.removeLayer(m.layer); m.cg?.removeLayer(m.layer); } catch {}
+          markers.splice(i, 1);
+        }
+      }
+
       const isHistorial = reportWindowHours > 72;
       const since = new Date(Date.now() - reportWindowHours * 60 * 60 * 1000).toISOString();
       const cutoff24h = Date.now() - 24 * 60 * 60 * 1000;
-      let q = sb
-        .from("reports")
-        .select("id,lat,lng,category,report_type,note,confirmations,fulfilled_at,fulfill_count,created_at,contact_phone,reporter_name")
-        .gte("created_at", since)
-        .not("source", "eq", "ca")
-        .order("created_at", { ascending: false })
-        .limit(1000);
-      if (!isHistorial) q = q.eq("is_active", true); // historial: incluir expirados (si RLS lo permite)
-      const { data: raw, error } = await q;
-      const data = raw?.filter(r =>
-        r.report_type === "offer"
-          ? true                                          // ofrecimientos: 72h (ya filtrado por since)
-          : new Date(r.created_at).getTime() > cutoff24h // solicitudes: 24h
+
+      let raw, error;
+      if (isHistorial) {
+        // RPC que bypasea RLS para incluir reportes expirados (is_active = false)
+        ({ data: raw, error } = await sb.rpc("get_historical_reports", { since_ts: since }));
+      } else {
+        ({ data: raw, error } = await sb
+          .from("reports")
+          .select("id,lat,lng,category,report_type,note,confirmations,fulfilled_at,fulfill_count,created_at,contact_phone,reporter_name")
+          .eq("is_active", true)
+          .gte("created_at", since)
+          .not("source", "eq", "ca")
+          .order("created_at", { ascending: false })
+          .limit(1000));
+      }
+
+      const data = (raw || []).filter(r =>
+        isHistorial
+          ? true                                              // historial: mostrar todo sin filtro de tiempo
+          : r.report_type === "offer"
+            ? true                                            // ofrecimientos: 72h
+            : new Date(r.created_at).getTime() > cutoff24h   // solicitudes: 24h
       );
 
       if (error) {
         showStatus("Error al cargar: " + error.message, "err", 5000);
         return;
       }
-      data.forEach(addReportToMap);
+      data.forEach(r => addReportToMap(r, isHistorial && r.is_active === false));
       showStatus(`${data.length} reporte(s) activos · últimas 48h`, "ok");
     }
 
