@@ -2070,104 +2070,21 @@
     }
 
     // Mapea una fila del Sheet (columnas Quién/Dirección/Coordenadas/Ciudad/Qué reciben/Contacto) → centro
-    function sheetRowToCentro(row, headerMap) {
-      const get = (key) => {
-        const idx = headerMap[key];
-        return idx != null ? (row[idx] || "").trim() : "";
-      };
-      const coords = get("coordenadas");
-      const m = coords.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
-      if (!m) return null;
-      const lat = parseFloat(m[1]), lng = parseFloat(m[2]);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-      if (lat < -1 || lat > 17 || lng < -75 || lng > -58) return null;
-      const org = get("quien"), addr = get("direccion");
-      if (!org && !addr) return null;
-      return {
-        org, addr, lat, lng,
-        ciudad:   get("ciudad"),
-        acepta:   get("acepta"),
-        contacto: get("contacto"),
-      };
-    }
-
-    function buildHeaderMap(headerRow) {
-      // Normaliza nombres de columna del sheet a claves internas
-      const norm = (s) => String(s||"").trim().toLowerCase()
-        .normalize("NFD").replace(/[̀-ͯ]/g, "");
-      const aliases = {
-        quien:       ["quien", "organizacion", "org"],
-        direccion:   ["direccion", "address", "addr"],
-        coordenadas: ["coordenadas", "coords", "lat,lng", "latlng"],
-        ciudad:      ["ciudad", "city"],
-        acepta:      ["que reciben", "acepta", "reciben", "items"],
-        contacto:    ["contacto", "contact", "telefono", "phone"],
-      };
-      const map = {};
-      headerRow.forEach((h, i) => {
-        const n = norm(h);
-        for (const [key, list] of Object.entries(aliases)) {
-          if (list.some(a => n === a)) map[key] = i;
-        }
-      });
-      return map;
-    }
-
     // ============================================================
-    // CENTROS — fuente primaria: Google Sheets (auto-actualiza)
-    // Fuente fallback: window.CENTROS de centros.js
+    // CENTROS — fuente única: AyudaParaVenezuela (APV)
     // ============================================================
-    const SHEET_CENTROS = {
-      id:  "1OTNQGMsK3nU2wqy00rtPPcwsSzAlorWeP-uIotWpkxM",
-      gid: "0",
-      cacheKey: "pa_centros_v1",
-      maxAgeMs: 5 * 60 * 1000,  // refresca cada 5 min
-    };
-
-    async function fetchSheetCentros() {
-      // gviz endpoint = CORS habilitado por Google
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_CENTROS.id}/gviz/tq?tqx=out:csv&gid=${SHEET_CENTROS.gid}`;
-      const res = await fetch(url, { mode: "cors" });
-      if (!res.ok) throw new Error("Sheet HTTP " + res.status);
-      const txt = await res.text();
-      const rows = parseCSV(txt);
-      if (!rows.length) return [];
-      const headerMap = buildHeaderMap(rows[0]);
-      const out = [];
-      for (let i = 1; i < rows.length; i++) {
-        const c = sheetRowToCentro(rows[i], headerMap);
-        if (c) out.push(c);
-      }
-      return out;
-    }
-
-    const CENTRO_DEDUP_M = 80; // saltar pines a menos de 80m de uno ya pintado
-
-    function centroNearby(lat, lng) {
-      for (const m of markers) {
-        if (!m.isCentro) continue;
-        const ll = m.layer.getLatLng();
-        const dLat = (lat - ll.lat) * 111000;
-        const dLng = (lng - ll.lng) * 111000 * Math.cos(lat * Math.PI / 180);
-        if (Math.sqrt(dLat*dLat + dLng*dLng) < CENTRO_DEDUP_M) return true;
-      }
-      return false;
-    }
-
-    function renderCentros(list, centroSource = "sheets") {
+    function renderCentros(list) {
       if (!Array.isArray(list) || !list.length) return 0;
       const cg = getOrCreateCluster("centro");
-      let added = 0, skipped = 0;
+      let added = 0;
       for (const c of list) {
         if (!Number.isFinite(c.lat) || !Number.isFinite(c.lng)) continue;
-        if (centroSource !== "sheets" && centroNearby(c.lat, c.lng)) { skipped++; continue; }
         const layer = buildCentroLayer(c);
-        const entry = { layer, isCentro: true, centroSource, category: "centro", report_type: null, created_at: null,
+        const entry = { layer, isCentro: true, centroSource: "apv", category: "centro", report_type: null, created_at: null,
                         centroName: (c.org || c.addr || ""), cg };
         markers.push(entry);
         if (matchesFilter(entry, activeFilter)) { cg.addLayer(layer); added++; }
       }
-      if (skipped) console.info(`renderCentros(${centroSource}): ${added} pintados, ${skipped} dedup`);
       return added;
     }
 
@@ -2179,77 +2096,8 @@
       }
     }
 
-    async function upsertCentrosToSupabase(list) {
-      if (!sb || !list.length) return;
-      const rows = list.map(c => ({
-        org:          c.org   || null,
-        addr:         c.addr  || null,
-        lat:          c.lat,
-        lng:          c.lng,
-        ciudad:       c.ciudad  || null,
-        acepta:       c.acepta  || null,
-        contacto:     c.contacto || null,
-        source:       "sheets",
-        external_key: [c.org, c.addr, String(Math.round(c.lat*1000)), String(Math.round(c.lng*1000))]
-                        .filter(Boolean).join("|").slice(0, 200),
-      }));
-      for (let i = 0; i < rows.length; i += 50) {
-        const chunk = rows.slice(i, i + 50);
-        const { error } = await sb.from("centros").upsert(chunk, { onConflict: "source,external_key" });
-        if (error) {
-          if (/no unique or exclusion constraint|does not exist/i.test(error.message)) {
-            console.warn("centros→Supabase: crea la tabla centros con supabase_setup.sql sección 8");
-          } else {
-            console.warn("centros→Supabase:", error.message);
-          }
-          return;
-        }
-        await new Promise(r => setTimeout(r, 150));
-      }
-      console.info(`centros→Supabase: ${rows.length} centros sincronizados`);
-    }
-
-    async function loadCentros() {
-      // Caché rápida de Sheets → paint instantáneo
-      let cached = null;
-      try {
-        const raw = localStorage.getItem(SHEET_CENTROS.cacheKey);
-        if (raw) {
-          const obj = JSON.parse(raw);
-          if (obj && Date.now() - obj.t < SHEET_CENTROS.maxAgeMs && Array.isArray(obj.data)) cached = obj.data;
-        }
-      } catch {}
-
-      let painted = 0;
-      if (cached?.length) {
-        painted = renderCentros(cached, "sheets");
-        showStatus(`${painted} centros · actualizando…`, "ok", 1500);
-      } else if (Array.isArray(window.CENTROS)) {
-        // Sin caché: bundle estático como placeholder mientras carga Sheets
-        painted = renderCentros(window.CENTROS, "static");
-      }
-
-      try {
-        const fresh = await fetchSheetCentros();
-        if (!fresh.length) throw new Error("Sheet vacío");
-        try { localStorage.setItem(SHEET_CENTROS.cacheKey, JSON.stringify({ t: Date.now(), data: fresh })); } catch {}
-        upsertCentrosToSupabase(fresh).catch(e => console.warn("centros→Supabase:", e.message));
-        // Reemplazar solo la fuente que pintamos antes (sheets o static)
-        clearCentrosBySource("sheets");
-        clearCentrosBySource("static");
-        renderCentros(fresh, "sheets");
-        showStatus(`${fresh.length} centros`, "ok", 2000);
-      } catch (err) {
-        console.warn("Sheet fetch falló:", err.message);
-        // Si falló y no teníamos nada, mostrar bundle estático
-        if (!painted && Array.isArray(window.CENTROS)) {
-          renderCentros(window.CENTROS, "static");
-          showStatus(`${window.CENTROS.length} centros (offline)`, "ok", 2000);
-        }
-      }
-    }
-    if (window.requestIdleCallback) requestIdleCallback(loadCentros, { timeout: 500 });
-    else setTimeout(loadCentros, 50);
+    // Limpiar cachés obsoletas de fuentes anteriores (Sheets)
+    try { localStorage.removeItem("pa_centros_v1"); } catch {}
 
     // ============================================================
     // AYUDA PARA VENEZUELA — sync de centros desde CSV público
@@ -2326,14 +2174,16 @@
 
       if (cached?.length) {
         clearCentrosBySource("apv");
-        renderCentros(cached, "apv");
+        const painted = renderCentros(cached);
+        showStatus(`${painted} centros · actualizando…`, "ok", 1500);
         // Refresh en background
         fetch(APV_URL).then(r => r.text()).then(txt => {
           const fresh = parseAPVCsv(txt);
           if (!fresh.length) return;
           try { localStorage.setItem(APV_CACHE, JSON.stringify({ t: Date.now(), data: fresh })); } catch {}
           clearCentrosBySource("apv");
-          renderCentros(fresh, "apv");
+          const n = renderCentros(fresh);
+          showStatus(`${n} centros de acopio`, "ok", 2000);
           upsertAPVCentrosToSupabase(fresh);
         }).catch(() => {});
         return;
@@ -2346,14 +2196,16 @@
         if (!fresh.length) { console.warn("APV: CSV vacío o sin datos válidos"); return; }
         try { localStorage.setItem(APV_CACHE, JSON.stringify({ t: Date.now(), data: fresh })); } catch {}
         clearCentrosBySource("apv");
-        renderCentros(fresh, "apv");
-        console.info(`APV: ${fresh.length} centros pintados`);
+        const n = renderCentros(fresh);
+        showStatus(`${n} centros de acopio`, "ok", 2000);
         upsertAPVCentrosToSupabase(fresh).catch(() => {});
       } catch (e) {
         console.warn("APV centros: no disponible —", e.message);
+        showStatus("Centros de acopio no disponibles", "err", 3000);
       }
     }
-    setTimeout(loadAPVCentros, 1500);
+    if (window.requestIdleCallback) requestIdleCallback(loadAPVCentros, { timeout: 500 });
+    else setTimeout(loadAPVCentros, 50);
 
     // ============================================================
     // PANEL "BUSCAR PERSONA"
@@ -2740,48 +2592,31 @@
       const existingCentroKeys = new Set(existingCentros.map(m => normalizeHospName(m.centroName || "")));
       const existingReports = markers.filter(m => !m.isCentro && !m.isHospital && m.layer && m.layer.getLatLng);
 
-      let addedC = 0, addedR = 0, skipped = 0;
+      let addedR = 0, skipped = 0;
       for (const p of points) {
         if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) { skipped++; continue; }
         if (p.lat < -1 || p.lat > 17 || p.lng < -75 || p.lng > -58) { skipped++; continue; }
 
         const mapped = CA_CAT_MAP[p.categoria];
-        if (mapped === undefined || mapped === null) { skipped++; continue; }
+        // centros se omiten — fuente única es APV
+        if (mapped === undefined || mapped === null || mapped === "_centro") { skipped++; continue; }
 
-        if (mapped === "_centro") {
-          const k = normalizeHospName(p.nombre || "");
-          // dedup por nombre normalizado O por coordenadas cercanas (~100m)
-          if (k && existingCentroKeys.has(k)) { skipped++; continue; }
-          if (existingCentros.some(m => { const ll = m.layer.getLatLng(); return isCloseTo(p.lat, p.lng, ll.lat, ll.lng, 100); })) { skipped++; continue; }
-          const layer = buildCAExternalCentro(p);
-          const cgC = getOrCreateCluster("centro");
-          const entry = { layer, isCentro: true, category: "centro", report_type: null, created_at: null,
-                          centroName: p.nombre || "", source: "ca", isExternal: true, cg: cgC };
-          markers.push(entry);
-          if (matchesFilter(entry, activeFilter)) cgC.addLayer(layer);
-          if (k) existingCentroKeys.add(k);
-          addedC++;
-        } else {
-          // Dedup contra reportes nuestros cercanos en la misma categoría
-          const dup = existingReports.some(m => {
-            if (m.category !== mapped) return false;
-            const ll = m.layer.getLatLng();
-            return isCloseTo(p.lat, p.lng, ll.lat, ll.lng);
-          });
-          if (dup) { skipped++; continue; }
+        // Dedup contra reportes nuestros cercanos en la misma categoría
+        const dup = existingReports.some(m => {
+          if (m.category !== mapped) return false;
+          const ll = m.layer.getLatLng();
+          return isCloseTo(p.lat, p.lng, ll.lat, ll.lng);
+        });
+        if (dup) { skipped++; continue; }
 
-          const type = caResolveType(p.tipo, mapped);
-          const layer = buildCAExternalReport(p, mapped);
-          const cg = getOrCreateCluster(mapped);
-          const entry = { layer, category: mapped, report_type: type, created_at: null,
-                          source: "ca", isExternal: true, cg };
-          markers.push(entry);
-          if (matchesFilter(entry, activeFilter)) cg.addLayer(layer);
-          addedR++;
-        }
-      }
-      if (addedC > 0) {
-        showStatus(`+${addedC} centros adicionales cargados`, "ok", 3000);
+        const type = caResolveType(p.tipo, mapped);
+        const layer = buildCAExternalReport(p, mapped);
+        const cg = getOrCreateCluster(mapped);
+        const entry = { layer, category: mapped, report_type: type, created_at: null,
+                        source: "ca", isExternal: true, cg };
+        markers.push(entry);
+        if (matchesFilter(entry, activeFilter)) cg.addLayer(layer);
+        addedR++;
       }
       // Sincronizar a nuestra Supabase (máx 1 vez cada 30 min, en background)
       if (shouldSyncExternal()) {
@@ -2819,8 +2654,9 @@
         if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
         if (p.lat < -1 || p.lat > 17 || p.lng < -75 || p.lng > -58) continue;
         const mapped = CA_CAT_MAP[p.categoria];
-        if (mapped === undefined || mapped === null) continue;
-        const category = mapped === "_centro" ? "centro_acopio" : mapped;
+        // centros de acopio no se sincronizan desde CA — fuente única es APV
+        if (mapped === undefined || mapped === null || mapped === "_centro") continue;
+        const category = mapped;
         const note = [p.descripcion, p.necesitan, p.ofrecen].filter(Boolean).join(" · ").slice(0, 280) || null;
         // phone: limpia y valida rango 7-25 chars (CHECK de RLS); null si inválido
         const rawPhone = (p.telefono || "").trim();
