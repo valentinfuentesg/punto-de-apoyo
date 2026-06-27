@@ -618,13 +618,13 @@
       position: absolute; bottom: 132px; right: 16px; z-index: 500;
       display: flex; align-items: center; gap: 6px;
       padding: 8px 13px; border-radius: 20px;
-      background: #1e293b; border: 1.5px solid #475569;
+      background: #111; border: 1.5px solid var(--border);
       color: #e2e8f0; font-size: 13px; font-weight: 600;
       cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
       font-family: inherit; transition: background .15s, border-color .15s;
       white-space: nowrap;
     }
-    .buscar-btn:hover { background: #334155; border-color: #60a5fa; }
+    .buscar-btn:hover { background: #1a1a1a; border-color: #444; }
     .buscar-btn svg { flex-shrink: 0; }
     @media (max-width: 420px) {
       .buscar-btn .buscar-label { display: none; }
@@ -856,7 +856,7 @@
   </div>
 
   <button id="buscarBtn" class="buscar-btn" aria-label="Recursos y plataformas de ayuda">
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
     <span class="buscar-label">Recursos</span>
   </button>
 
@@ -1325,6 +1325,7 @@
     let selectedType  = "offer"; // "offer" | "request" — tipo elegido en el modal
     let warnedDup        = false;   // segundo click confirma si ya hay un pin similar cerca
     let reportWindowHours = 72;     // 72 = activos recientes | 168 = historial 7 días
+    let loadReportsGen   = 0;       // token para cancelar llamadas solapadas
 
     // marker -> { layer, category, report_type, created_at, cg? }
     const markers = [];
@@ -1719,6 +1720,9 @@
     async function loadReports() {
       if (!sb) return;
 
+      // Token de cancelación: si se lanza otra llamada antes de que esta termine, descartamos
+      const myGen = ++loadReportsGen;
+
       // Limpiar reportes ciudadanos antes de recargar — evita acumulación en toggles
       for (let i = markers.length - 1; i >= 0; i--) {
         const m = markers[i];
@@ -1734,7 +1738,6 @@
 
       let raw, error;
       if (isHistorial) {
-        // RPC que bypasea RLS para incluir reportes expirados (is_active = false)
         ({ data: raw, error } = await sb.rpc("get_historical_reports", { since_ts: since }));
       } else {
         ({ data: raw, error } = await sb
@@ -1747,18 +1750,20 @@
           .limit(1000));
       }
 
-      const data = (raw || []).filter(r =>
-        isHistorial
-          ? true                                              // historial: mostrar todo sin filtro de tiempo
-          : r.report_type === "offer"
-            ? true                                            // ofrecimientos: 72h
-            : new Date(r.created_at).getTime() > cutoff24h   // solicitudes: 24h
-      );
+      // Si llegó una llamada más nueva mientras esperábamos, descartar esta respuesta
+      if (myGen !== loadReportsGen) return;
 
       if (error) {
         showStatus("Error al cargar: " + error.message, "err", 5000);
         return;
       }
+      const data = (raw || []).filter(r =>
+        isHistorial
+          ? true
+          : r.report_type === "offer"
+            ? true
+            : new Date(r.created_at).getTime() > cutoff24h
+      );
       data.forEach(r => addReportToMap(r, isHistorial && r.is_active === false));
       showStatus(`${data.length} reporte(s) activos · últimas 48h`, "ok");
     }
@@ -2237,7 +2242,8 @@
         const lat = parseFloat(cols[iLat]), lng = parseFloat(cols[iLng]);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
         if (lat < -1 || lat > 17 || lng < -75 || lng > -58) continue;
-        const supply = (cols[iSupply] || "").replace(/\|/g, ", ");
+        const supplyRaw = (cols[iSupply] || "").replace(/\|/g, ", ").trim();
+        const supply = /^pendiente$/i.test(supplyRaw) ? "" : supplyRaw;
         const contacto = [cols[iPhone], cols[iSched]].filter(v => v && v !== "N/A").join(" · ");
         results.push({
           org:          cols[iOrg] || cols[iName] || "AyudaParaVenezuela",
