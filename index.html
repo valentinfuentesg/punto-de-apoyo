@@ -2084,7 +2084,7 @@
         const dup = painted.some(p => {
           const dLat = (c.lat - p.lat) * 111000;
           const dLng = (c.lng - p.lng) * 111000 * Math.cos(c.lat * Math.PI / 180);
-          return Math.sqrt(dLat * dLat + dLng * dLng) < 80;
+          return Math.sqrt(dLat * dLat + dLng * dLng) < 150;
         });
         if (dup) { skipped++; continue; }
         painted.push({ lat: c.lat, lng: c.lng });
