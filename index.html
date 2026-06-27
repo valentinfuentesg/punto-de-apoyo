@@ -2141,17 +2141,33 @@
       return out;
     }
 
+    const CENTRO_DEDUP_M = 80; // saltar pines a menos de 80m de uno ya pintado
+
+    function centroNearby(lat, lng) {
+      for (const m of markers) {
+        if (!m.isCentro) continue;
+        const ll = m.layer.getLatLng();
+        const dLat = (lat - ll.lat) * 111000;
+        const dLng = (lng - ll.lng) * 111000 * Math.cos(lat * Math.PI / 180);
+        if (Math.sqrt(dLat*dLat + dLng*dLng) < CENTRO_DEDUP_M) return true;
+      }
+      return false;
+    }
+
     function renderCentros(list, centroSource = "sheets") {
       if (!Array.isArray(list) || !list.length) return 0;
       const cg = getOrCreateCluster("centro");
-      let added = 0;
+      let added = 0, skipped = 0;
       for (const c of list) {
+        if (!Number.isFinite(c.lat) || !Number.isFinite(c.lng)) continue;
+        if (centroSource !== "sheets" && centroNearby(c.lat, c.lng)) { skipped++; continue; }
         const layer = buildCentroLayer(c);
         const entry = { layer, isCentro: true, centroSource, category: "centro", report_type: null, created_at: null,
                         centroName: (c.org || c.addr || ""), cg };
         markers.push(entry);
         if (matchesFilter(entry, activeFilter)) { cg.addLayer(layer); added++; }
       }
+      if (skipped) console.info(`renderCentros(${centroSource}): ${added} pintados, ${skipped} dedup`);
       return added;
     }
 
@@ -2194,12 +2210,7 @@
     }
 
     async function loadCentros() {
-      // Centros estáticos del bundle (siempre — no se pisan con otras fuentes)
-      if (Array.isArray(window.CENTROS) && window.CENTROS.length) {
-        renderCentros(window.CENTROS, "static");
-      }
-
-      // Sheets: caché rápida → refresh en background
+      // Caché rápida de Sheets → paint instantáneo
       let cached = null;
       try {
         const raw = localStorage.getItem(SHEET_CENTROS.cacheKey);
@@ -2209,10 +2220,13 @@
         }
       } catch {}
 
+      let painted = 0;
       if (cached?.length) {
-        clearCentrosBySource("sheets");
-        renderCentros(cached, "sheets");
-        showStatus(`${cached.length} centros · actualizando…`, "ok", 1500);
+        painted = renderCentros(cached, "sheets");
+        showStatus(`${painted} centros · actualizando…`, "ok", 1500);
+      } else if (Array.isArray(window.CENTROS)) {
+        // Sin caché: bundle estático como placeholder mientras carga Sheets
+        painted = renderCentros(window.CENTROS, "static");
       }
 
       try {
@@ -2220,11 +2234,18 @@
         if (!fresh.length) throw new Error("Sheet vacío");
         try { localStorage.setItem(SHEET_CENTROS.cacheKey, JSON.stringify({ t: Date.now(), data: fresh })); } catch {}
         upsertCentrosToSupabase(fresh).catch(e => console.warn("centros→Supabase:", e.message));
+        // Reemplazar solo la fuente que pintamos antes (sheets o static)
         clearCentrosBySource("sheets");
+        clearCentrosBySource("static");
         renderCentros(fresh, "sheets");
-        showStatus(`${fresh.length} centros desde Google Sheets`, "ok", 2000);
+        showStatus(`${fresh.length} centros`, "ok", 2000);
       } catch (err) {
         console.warn("Sheet fetch falló:", err.message);
+        // Si falló y no teníamos nada, mostrar bundle estático
+        if (!painted && Array.isArray(window.CENTROS)) {
+          renderCentros(window.CENTROS, "static");
+          showStatus(`${window.CENTROS.length} centros (offline)`, "ok", 2000);
+        }
       }
     }
     if (window.requestIdleCallback) requestIdleCallback(loadCentros, { timeout: 500 });
@@ -2238,10 +2259,22 @@
     const APV_CACHE = "apv_centros_v1";
     const APV_TTL   = 30 * 60 * 1000; // 30 min
 
+    function splitCSVLine(line) {
+      const out = []; let cur = "", inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+        else if (ch === ',' && !inQ) { out.push(cur); cur = ""; }
+        else cur += ch;
+      }
+      out.push(cur);
+      return out;
+    }
+
     function parseAPVCsv(text) {
       const lines = text.trim().split("\n");
       if (lines.length < 2) return [];
-      const header = lines[0].split(",");
+      const header = splitCSVLine(lines[0]);
       const idx = k => header.indexOf(k);
       const iName = idx("name"), iOrg = idx("organization"), iCity = idx("city"),
             iAddr = idx("address"), iLat = idx("latitude"), iLng = idx("longitude"),
@@ -2249,8 +2282,7 @@
             iActive = idx("is_active"), iId = idx("id");
       const results = [];
       for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].match(/("(?:[^"]|"")*"|[^,]*)/g).map(c =>
-          c.startsWith('"') ? c.slice(1,-1).replace(/""/g,'"') : c);
+        const cols = splitCSVLine(lines[i]);
         if (cols[iActive]?.toLowerCase() !== "true") continue;
         const lat = parseFloat(cols[iLat]), lng = parseFloat(cols[iLng]);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
