@@ -1873,7 +1873,7 @@
           showStatus(isRate
             ? "Demasiados reportes seguidos. Intenta en unos minutos."
             : "No se pudo guardar el reporte. Intenta de nuevo.", "err", 5000);
-          console.error("Insert error:", error);
+          console.error("Insert error:", error?.code, error?.message, error?.details, error?.hint, JSON.stringify(payload));
           lastSubmit = 0;
           exitReportingMode();
           return;
