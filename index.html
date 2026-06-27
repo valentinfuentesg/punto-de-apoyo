@@ -2571,10 +2571,8 @@
       const points = await fetchCaracasAyudaPoints();
       if (!points.length) return;
 
-      const existingCentroKeys = new Set(
-        markers.filter(m => m.isCentro)
-               .map(m => normalizeHospName(m.centroName || ""))
-      );
+      const existingCentros = markers.filter(m => m.isCentro && m.layer?.getLatLng);
+      const existingCentroKeys = new Set(existingCentros.map(m => normalizeHospName(m.centroName || "")));
       const existingReports = markers.filter(m => !m.isCentro && !m.isHospital && m.layer && m.layer.getLatLng);
 
       let addedC = 0, addedR = 0, skipped = 0;
@@ -2587,7 +2585,9 @@
 
         if (mapped === "_centro") {
           const k = normalizeHospName(p.nombre || "");
+          // dedup por nombre normalizado O por coordenadas cercanas (~100m)
           if (k && existingCentroKeys.has(k)) { skipped++; continue; }
+          if (existingCentros.some(m => { const ll = m.layer.getLatLng(); return isCloseTo(p.lat, p.lng, ll.lat, ll.lng, 100); })) { skipped++; continue; }
           const layer = buildCAExternalCentro(p);
           const cgC = getOrCreateCluster("centro");
           const entry = { layer, isCentro: true, category: "centro", report_type: null, created_at: null,
@@ -2657,11 +2657,14 @@
         if (mapped === undefined || mapped === null) continue;
         const category = mapped === "_centro" ? "centro_acopio" : mapped;
         const note = [p.descripcion, p.necesitan, p.ofrecen].filter(Boolean).join(" · ").slice(0, 280) || null;
+        // phone: limpia y valida rango 7-25 chars (CHECK de RLS); null si inválido
+        const rawPhone = (p.telefono || "").trim();
+        const cleanPhone = rawPhone.length >= 7 && rawPhone.length <= 25 ? rawPhone : null;
         rows.push({
           lat: p.lat, lng: p.lng, category,
           report_type: caResolveType(p.tipo, category),
           note,
-          contact_phone: p.telefono || null,
+          contact_phone: cleanPhone,
           source: "ca",
           external_id: String(p.id),
           external_source: "caracasayuda",
@@ -2670,26 +2673,21 @@
         });
       }
       if (!rows.length) return;
-      // Verificar que las columnas existen antes de upsert
+      console.info(`CA sync: enviando ${rows.length} filas a Supabase…`);
       let success = true;
       for (let i = 0; i < rows.length; i += 50) {
         const chunk = rows.slice(i, i + 50);
         const { error } = await sb.from("reports").upsert(chunk, { onConflict: "external_source,external_id" });
         if (error) {
           if (/no unique or exclusion constraint/i.test(error.message)) {
-            // El índice único no existe aún — ejecutar en Supabase:
-            // CREATE UNIQUE INDEX reports_external_idx ON reports(external_source, external_id)
-            // WHERE external_source IS NOT NULL AND external_id IS NOT NULL;
-            console.warn("CA sync: falta CREATE UNIQUE INDEX en Supabase (ver descripción del PR #12)");
-            success = false;
-            break;
+            console.error("CA sync FALLA: CREATE UNIQUE INDEX no ejecutado.\nSQL: CREATE UNIQUE INDEX reports_external_idx ON reports(external_source,external_id) WHERE external_source IS NOT NULL;");
+          } else if (/column|schema|not found/i.test(error.message)) {
+            console.error("CA sync FALLA: columna faltante →", error.message, "\nEjecuta supabase_setup.sql sección 7.");
+          } else if (/violates row-level security/i.test(error.message)) {
+            console.error("CA sync FALLA: RLS rechaza la fila. Chunk de muestra:", JSON.stringify(chunk[0]), "\nError:", error.message);
+          } else {
+            console.error("CA sync FALLA:", error.message, "\nChunk[0]:", JSON.stringify(chunk[0]));
           }
-          if (/column|schema|not found/i.test(error.message)) {
-            console.warn("CA sync: falta ALTER TABLE ADD COLUMN (ver descripción del PR #12)");
-            success = false;
-            break;
-          }
-          console.warn("CA→Supabase upsert:", error.message);
           success = false;
           break;
         }
@@ -2697,7 +2695,7 @@
       }
       if (success) {
         markExternalSynced();
-        console.info(`CA sync: ${rows.length} puntos sincronizados a Supabase`);
+        console.info(`CA sync OK: ${rows.length} puntos sincronizados`);
       }
     }
 
