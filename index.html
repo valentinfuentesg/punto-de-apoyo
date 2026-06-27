@@ -4,8 +4,59 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#CE1126" />
-  <meta name="description" content="Punto de Apoyo — mapa colaborativo de emergencia en Venezuela. Reporta y encuentra recursos cerca de ti. Centros de acopio, ayuda mutua, sin fines de lucro." />
-  <meta name="robots" content="index, follow" />
+  <meta name="description" content="Punto de Apoyo Venezuela — mapa colaborativo de emergencia tras el terremoto. Encuentra centros de acopio, hospitales que buscan donantes de sangre, ayuda ciudadana y reporta lo que necesitas o lo que ofreces, gratis y sin registro." />
+  <meta name="keywords" content="punto de apoyo, venezuela, terremoto venezuela, sismo venezuela 2026, sismo 7.3 venezuela, terremoto caracas 2026, terremoto la guaira 2026, sismo caracas mayo 2026, centros de acopio venezuela, centros de acopio caracas, centros de acopio la guaira, mapa de ayuda venezuela, hospitales venezuela, hospitales caracas, donantes de sangre venezuela, ayuda humanitaria venezuela, mapa colaborativo, emergencia venezuela, reportar necesidades, ofrecer ayuda, caracas, la guaira, vargas, miranda, carabobo, aragua, donde ayudar venezuela, como ayudar venezuela, damnificados venezuela, evacuados venezuela, rescate venezuela, voluntarios venezuela, donaciones venezuela, suministros venezuela, agua venezuela, luz venezuela, señal venezuela, wifi venezuela, energia venezuela, mapa emergencia venezuela, donde donar venezuela, familia desaparecida venezuela, buscar familiar venezuela terremoto, localizados venezuela, ayuda venezuela 2026, sismo vargas, terremoto vargas" />
+  <meta name="author" content="Valentín Fuentes (@vxlentinF)" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="googlebot" content="index, follow" />
+  <link rel="canonical" href="https://www.puntodeapoyovenezuela.com/" />
+
+  <!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Punto de Apoyo Venezuela" />
+  <meta property="og:title" content="Punto de Apoyo Venezuela 🇻🇪 — Mapa de Emergencia" />
+  <meta property="og:description" content="Mapa colaborativo de emergencia tras el terremoto de Venezuela. Centros de acopio, hospitales con donantes, ayuda ciudadana en tiempo real. Gratis y sin registro." />
+  <meta property="og:url" content="https://www.puntodeapoyovenezuela.com/" />
+  <meta property="og:locale" content="es_VE" />
+  <meta property="og:image" content="https://www.puntodeapoyovenezuela.com/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Mapa de Venezuela con pines de centros de acopio, hospitales y reportes ciudadanos" />
+
+  <!-- Twitter / X Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@vxlentinF" />
+  <meta name="twitter:creator" content="@vxlentinF" />
+  <meta name="twitter:title" content="Punto de Apoyo Venezuela 🇻🇪" />
+  <meta name="twitter:description" content="Mapa colaborativo de emergencia tras el terremoto. Centros de acopio, hospitales con donantes, ayuda ciudadana en tiempo real." />
+  <meta name="twitter:image" content="https://www.puntodeapoyovenezuela.com/og-image.png" />
+
+  <!-- Structured data (Schema.org) — ayuda a Google a entender qué es el sitio -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Punto de Apoyo Venezuela",
+    "alternateName": "Punto de Apoyo",
+    "url": "https://www.puntodeapoyovenezuela.com/",
+    "description": "Mapa colaborativo de emergencia tras el terremoto de Venezuela. Centros de acopio, hospitales con donantes de sangre, ayuda ciudadana en tiempo real.",
+    "inLanguage": "es-VE",
+    "author": { "@type": "Person", "name": "Valentín Fuentes", "url": "https://twitter.com/vxlentinF" },
+    "publisher": { "@type": "Organization", "name": "Punto de Apoyo Venezuela", "logo": { "@type": "ImageObject", "url": "https://www.puntodeapoyovenezuela.com/og-image.png" } },
+    "potentialAction": { "@type": "SearchAction", "target": "https://www.puntodeapoyovenezuela.com/?q={search_term_string}", "query-input": "required name=search_term_string" }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "EmergencyService",
+    "name": "Punto de Apoyo Venezuela — Mapa de emergencia",
+    "url": "https://www.puntodeapoyovenezuela.com/",
+    "areaServed": { "@type": "Country", "name": "Venezuela" },
+    "audience": { "@type": "Audience", "audienceType": "Personas afectadas por el sismo de Venezuela 2026 y voluntarios" },
+    "availableLanguage": "es"
+  }
+  </script>
 
   <!-- ===== Cabeceras de seguridad ===== -->
   <!-- frame-ancestors no aplica en <meta> (solo HTTP header); X-Frame-Options cubre el caso. -->
@@ -42,6 +93,10 @@
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+  <!-- Leaflet.markercluster -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="anonymous" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin="anonymous"></script>
 
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
@@ -101,19 +156,36 @@
       margin: 3px 0 0; font-size: 11px; color: #e5e7eb;
       text-shadow: 0 1px 2px rgba(0,0,0,0.9);
     }
-    .hero-stats {
-      display: inline-flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
-      font-size: 11px; font-weight: 600; color: #fff;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
-      pointer-events: none;
+    /* Hero stats — barra flotante centrada sobre el FAB */
+    .stats-bar {
+      position: absolute;
+      bottom: 92px;
+      left: 50%; transform: translateX(-50%);
+      z-index: 500;
+      display: inline-flex; gap: 5px;
+      overflow-x: auto; max-width: calc(100% - 24px);
+      padding: 0 4px 2px; scrollbar-width: none;
+      pointer-events: auto;
+      -webkit-overflow-scrolling: touch;
     }
-    .hero-stats span {
-      background: rgba(0,0,0,0.55); padding: 3px 9px; border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.15);
-      display: inline-flex; align-items: center; gap: 4px;
+    .stats-bar::-webkit-scrollbar { display: none; }
+    .stats-bar span {
+      flex: 0 0 auto;
+      background: rgba(10,10,10,0.85);
+      padding: 5px 11px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      font-size: 11px; font-weight: 700; color: #fff;
+      display: inline-flex; align-items: center; gap: 5px;
+      backdrop-filter: blur(6px);
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
     }
-    .hero-stats svg { flex: 0 0 auto; }
-    .hero-stats:empty { display: none; }
+    .stats-bar svg { flex: 0 0 auto; }
+    .stats-bar:empty { display: none; }
+    @media (max-width: 600px) {
+      .stats-bar { bottom: 80px; gap: 4px; }
+      .stats-bar span { padding: 4px 9px; font-size: 10px; gap: 4px; }
+    }
 
     /* Chip toggleable verde (para "Cerca de mí") */
     .chip.toggle.active {
@@ -464,7 +536,8 @@
     .onboard-card .sub { font-size: 12px; color: var(--muted); margin: 0 0 18px; }
     .onboard-step { display: none; }
     .onboard-step.active { display: block; }
-    .onboard-step .icon { font-size: 44px; margin-bottom: 10px; line-height: 1; }
+    .onboard-step .icon { font-size: 44px; margin-bottom: 10px; line-height: 1; display:flex; justify-content:center; }
+    .onboard-step .icon svg { width: 52px; height: 52px; }
     .onboard-step h3 { margin: 0 0 8px; font-size: 16px; color: #fff; }
     .onboard-step p { margin: 0; color: #cbd5e1; font-size: 13px; line-height: 1.5; }
     .onboard-dots { display: flex; justify-content: center; gap: 6px; margin: 16px 0 12px; }
@@ -519,19 +592,8 @@
     .fab.offer   { background: #10b981; box-shadow: 0 8px 24px rgba(16,185,129,0.45); }
     .fab.request { background: #f97316; box-shadow: 0 8px 24px rgba(249,115,22,0.45); }
 
-    /* Leyenda flotante */
-    .legend {
-      position: absolute; bottom: 90px; right: 16px; z-index: 500;
-      background: rgba(17,17,17,0.92);
-      border: 1px solid var(--border); border-radius: 10px;
-      padding: 8px 10px; font-size: 11px;
-      backdrop-filter: blur(6px);
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .legend-row { display: flex; align-items: center; gap: 6px; }
-    .legend-dot { width: 12px; height: 12px; border-radius: 50%; border: 3px solid; background: #fff; }
-    .legend-dot.offer   { border-color: #10b981; }
-    .legend-dot.request { border-color: #f97316; }
+    /* Leyenda — oculta: la stats-bar ya muestra ofrecen/solicitan */
+    .legend { display: none !important; }
 
     /* ============== RESPONSIVE (móvil) ============== */
     @media (max-width: 600px) {
@@ -542,7 +604,6 @@
       .chip { padding: 5px 10px; font-size: 11px; }
       .fab { padding: 14px 22px; font-size: 15px; bottom: 18px; }
       .locate-btn { width: 44px; height: 44px; bottom: 20px; right: 12px; }
-      .legend { bottom: 78px; right: 12px; font-size: 10px; padding: 6px 8px; }
       .cat-btn { padding: 12px 14px; font-size: 14px; }
       .type-tab .ttitle { font-size: 13px; }
     }
@@ -584,25 +645,49 @@
   <!-- Onboarding (solo aparece la primera vez) -->
   <div id="onboard" class="onboard-bg">
     <div class="onboard-card">
-      <h2>🇻🇪 Punto de Apoyo</h2>
+      <h2><svg viewBox="0 0 24 16" width="22" height="14" style="vertical-align:middle;margin-right:5px;border-radius:2px;" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="5.3" y="0" fill="#FCDC23"/><rect width="24" height="5.4" y="5.3" fill="#0033A0"/><rect width="24" height="5.3" y="10.7" fill="#CE1126"/></svg>Punto de Apoyo</h2>
       <p class="sub">Mapa colaborativo de emergencia</p>
 
       <div class="onboard-step active" data-step="0">
-        <div class="icon">📦</div>
+        <div class="icon">
+          <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="26" cy="26" r="26" fill="#0ea5e9" opacity="0.12"/>
+            <path d="M26 44s-13-8-13-17a13 13 0 0 1 26 0c0 9-13 17-13 17z" fill="#0ea5e9" stroke="#0c4a6e" stroke-width="1.5"/>
+            <rect x="22" y="22" width="8" height="2" rx="1" fill="#fff"/>
+            <rect x="25" y="19" width="2" height="8" rx="1" fill="#fff"/>
+          </svg>
+        </div>
         <h3>Encuentra centros de acopio</h3>
         <p>Los pines <strong style="color:#0ea5e9">azules</strong> son centros oficiales que reciben donaciones. Toca uno para ver qué aceptan, contacto y cómo llegar en Google Maps.</p>
       </div>
 
       <div class="onboard-step" data-step="1">
-        <div class="icon">🟢🟠</div>
+        <div class="icon" style="gap:8px;">
+          <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="26" cy="26" r="26" fill="#10b981" opacity="0.12"/>
+            <circle cx="26" cy="26" r="14" fill="#10b981" stroke="#065f46" stroke-width="1.5"/>
+            <path d="M20 26l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="26" cy="26" r="26" fill="#f97316" opacity="0.12"/>
+            <circle cx="26" cy="26" r="14" fill="#f97316" stroke="#7c2d12" stroke-width="1.5"/>
+            <path d="M26 18v8M26 30v2" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
         <h3>Comparte lo que ofreces o necesitas</h3>
-        <p>Toca <strong>＋ Reportar Punto</strong>, marca el lugar y elige si <strong style="color:#10b981">ofreces</strong> (tienes agua, luz, señal) o <strong style="color:#f97316">necesitas</strong> ayuda. Es anónimo.</p>
+        <p>Toca <strong>+ Reportar Punto</strong>, marca el lugar y elige si <strong style="color:#10b981">ofreces</strong> (tienes agua, luz, señal) o <strong style="color:#f97316">necesitas</strong> ayuda. Es anónimo.</p>
       </div>
 
       <div class="onboard-step" data-step="2">
-        <div class="icon">👍</div>
+        <div class="icon">
+          <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="26" cy="26" r="26" fill="#10b981" opacity="0.12"/>
+            <rect x="10" y="14" width="32" height="24" rx="4" fill="#10b981" stroke="#065f46" stroke-width="1.5"/>
+            <path d="M18 26l5 5 11-10" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
         <h3>Confirma lo que verifiques</h3>
-        <p>Si pasaste por un punto y la info es correcta, dale <strong>👍 Confirmar</strong>. Mientras más confirmaciones, más confiable es. En emergencias reales llama al <strong>171 / *1 / 112 / 911</strong>.</p>
+        <p>Si pasaste por un punto y la info es correcta, dale <strong>Confirmar</strong>. Mientras más confirmaciones, más confiable es. En emergencias reales llama al <strong>171 / *1 / 112 / 911</strong>.</p>
       </div>
 
       <div class="onboard-dots">
@@ -619,14 +704,16 @@
   </div>
 
   <div class="header">
-    <h1>🇻🇪 Punto de Apoyo</h1>
+    <h1><svg viewBox="0 0 24 16" width="24" height="16" style="vertical-align:middle;margin-right:5px;border-radius:2px;" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="5.3" y="0" fill="#FCDC23"/><rect width="24" height="5.4" y="5.3" fill="#0033A0"/><rect width="24" height="5.3" y="10.7" fill="#CE1126"/></svg>Punto de Apoyo</h1>
     <p>Mapa de emergencia · Centros de acopio · Reportes ciudadanos</p>
-    <div id="heroStats" class="hero-stats" aria-live="polite"></div>
   </div>
+
+  <!-- Stats flotantes sobre el FAB -->
+  <div id="heroStats" class="stats-bar" aria-live="polite"></div>
 
   <div class="search-wrap" style="position:absolute;">
     <div style="position:relative;">
-      <span class="search-icon">🔍</span>
+      <span class="search-icon"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg></span>
       <input id="searchInput" class="search-input" type="text"
              placeholder="Buscar dirección, calle o sector…"
              autocomplete="off" maxlength="80"
@@ -696,7 +783,7 @@
   <div id="infoModal" class="info-modal-bg">
     <div class="info-modal">
       <div class="info-header">
-        <h2>🇻🇪 Punto de Apoyo</h2>
+        <h2><svg viewBox="0 0 24 16" width="22" height="14" style="vertical-align:middle;margin-right:5px;border-radius:2px;" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="5.3" y="0" fill="#FCDC23"/><rect width="24" height="5.4" y="5.3" fill="#0033A0"/><rect width="24" height="5.3" y="10.7" fill="#CE1126"/></svg>Punto de Apoyo</h2>
         <button class="info-close" id="infoClose" aria-label="Cerrar">✕</button>
       </div>
       <div class="info-body">
@@ -861,10 +948,12 @@
     <div class="legend-row"><span class="legend-dot request"></span>Necesita / Solicita</div>
   </div>
 
-  <div id="toast" class="toast">📍 Toca el mapa donde quieras reportar</div>
+  <div id="toast" class="toast">Toca el mapa donde quieras reportar</div>
   <div id="status" class="status"></div>
 
-  <button id="locateBtn" class="locate-btn" title="Mi ubicación">📍</button>
+  <button id="locateBtn" class="locate-btn" title="Mi ubicación">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="#3b82f6" stroke="#fff" stroke-width="1.5"><path d="M12 22s-7-7.5-7-13a7 7 0 1 1 14 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5" fill="#fff"/></svg>
+  </button>
   <button id="fab" class="fab">＋ Reportar Punto</button>
 
   <div id="modal" class="modal-bg">
@@ -881,32 +970,57 @@
         </button>
       </div>
       <div class="cat-grid">
-        <button class="cat-btn" data-cat="energia">
+        <button class="cat-btn" data-cat="energia" data-allowed="offer,request">
           <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#f59e0b" stroke="#78350f" stroke-width="1"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></span>
           Energía / Iluminación <small>(plantas, luz, linternas)</small>
         </button>
-        <button class="cat-btn" data-cat="senal">
+        <button class="cat-btn" data-cat="senal" data-allowed="offer,request">
           <span class="cat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2.5" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1.5" fill="#1e40af"/></svg></span>
           Señal / WiFi <small>(Movistar, Digitel, internet)</small>
         </button>
-        <button class="cat-btn" data-cat="suministros">
+        <button class="cat-btn" data-cat="suministros" data-allowed="offer,request">
           <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#0284c7" stroke="#0c4a6e" stroke-width="1"><path d="M12 2.5s7 7.5 7 12.5a7 7 0 1 1-14 0c0-5 7-12.5 7-12.5z"/></svg></span>
           Suministros <small>(agua, comida, ropa, herramientas, mascotas)</small>
         </button>
-        <button class="cat-btn" data-cat="asistencia">
+        <button class="cat-btn" data-cat="asistencia" data-allowed="offer,request">
           <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#dc2626" stroke="#7f1d1d" stroke-width="1"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/></svg></span>
           Salud / Voluntarios <small>(médica, medicinas, primeros auxilios)</small>
         </button>
-        <button class="cat-btn" data-cat="peligro">
-          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#eab308" stroke="#713f12" stroke-width="1"><path d="M12 2L1 22h22L12 2z"/><rect x="11" y="9" width="2" height="6" fill="#713f12"/><circle cx="12" cy="18" r="1" fill="#713f12"/></svg></span>
-          Peligro / Rescate <small>(vía trancada, derrumbe, atrapados)</small>
-        </button>
-        <button class="cat-btn" data-cat="movilidad">
+        <button class="cat-btn" data-cat="movilidad" data-allowed="offer,request">
           <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#7c3aed" stroke="#4c1d95" stroke-width="1"><path d="M5 11l1.7-4.7a2 2 0 0 1 1.9-1.3h8.8a2 2 0 0 1 1.9 1.3L21 11v6a1 1 0 0 1-1 1h-1.5a2 2 0 1 1-4 0h-5a2 2 0 1 1-4 0H4a1 1 0 0 1-1-1v-6h2z"/></svg></span>
           Movilidad / Transporte <small>(carro, moto, traslado)</small>
         </button>
+        <button class="cat-btn" data-cat="peligro" data-allowed="request">
+          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#eab308" stroke="#713f12" stroke-width="1"><path d="M12 2L1 22h22L12 2z"/><rect x="11" y="9" width="2" height="6" fill="#713f12"/><circle cx="12" cy="18" r="1" fill="#713f12"/></svg></span>
+          Peligro / Rescate <small>(vía trancada, derrumbe, atrapados)</small>
+        </button>
+        <button class="cat-btn" data-cat="centro_acopio" data-allowed="offer">
+          <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#0ea5e9" stroke="#0c4a6e" stroke-width="1"><path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/></svg></span>
+          Centro de acopio <small>(requiere verificación: nombre, dirección, teléfono)</small>
+        </button>
       </div>
-      <textarea id="noteInput" placeholder="Nota opcional (ej: hora, contacto, detalles)…"
+
+      <!-- Campos obligatorios para TODOS los reportes -->
+      <div id="reqFields" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+        <input id="phoneInput" type="tel" required maxlength="20" inputmode="tel"
+          placeholder="Teléfono de contacto (obligatorio, ej: +58 412 1234567)"
+          style="width:100%; padding:10px; background:#111; color:#fff; border:1px solid var(--border);
+                 border-radius:10px; font-size:13px; font-family:inherit;" />
+      </div>
+
+      <!-- Campos extra SOLO para centro de acopio -->
+      <div id="centroFields" style="display:none; margin-top:8px; flex-direction:column; gap:8px;">
+        <input id="reporterNameInput" type="text" maxlength="80"
+          placeholder="Tu nombre y apellido (quien registra el centro)"
+          style="width:100%; padding:10px; background:#111; color:#fff; border:1px solid var(--border);
+                 border-radius:10px; font-size:13px; font-family:inherit;" />
+        <input id="exactAddressInput" type="text" maxlength="280"
+          placeholder="Dirección exacta del centro (calle, edificio, referencia)"
+          style="width:100%; padding:10px; background:#111; color:#fff; border:1px solid var(--border);
+                 border-radius:10px; font-size:13px; font-family:inherit;" />
+      </div>
+
+      <textarea id="noteInput" placeholder="Nota opcional (ej: hora, detalles)…"
         maxlength="280" rows="2"
         style="width:100%; margin-top:10px; padding:10px; background:#111; color:#fff;
                border:1px solid var(--border); border-radius:10px; font-size:13px;
@@ -977,12 +1091,14 @@
     };
 
     const CATEGORIES = {
-      energia:     { emoji: "⚡",  label: "Energía / Iluminación",         svg: SVG_ICONS.energia },
-      senal:       { emoji: "📡",  label: "Señal / WiFi",                  svg: SVG_ICONS.senal },
-      suministros: { emoji: "💧",  label: "Suministros",                   svg: SVG_ICONS.suministros },
-      asistencia:  { emoji: "⚕️", label: "Salud / Voluntarios",            svg: SVG_ICONS.asistencia },
-      peligro:     { emoji: "🚫",  label: "Peligro / Rescate",             svg: SVG_ICONS.peligro },
-      movilidad:   { emoji: "🚗",  label: "Movilidad / Transporte",        svg: SVG_ICONS.movilidad },
+      energia:       { emoji: "⚡",  label: "Energía / Iluminación",         svg: SVG_ICONS.energia,     allowedTypes: ["offer","request"] },
+      senal:         { emoji: "📡",  label: "Señal / WiFi",                  svg: SVG_ICONS.senal,       allowedTypes: ["offer","request"] },
+      suministros:   { emoji: "💧",  label: "Suministros",                   svg: SVG_ICONS.suministros, allowedTypes: ["offer","request"] },
+      asistencia:    { emoji: "⚕️", label: "Salud / Voluntarios",            svg: SVG_ICONS.asistencia,  allowedTypes: ["offer","request"] },
+      movilidad:     { emoji: "🚗",  label: "Movilidad / Transporte",        svg: SVG_ICONS.movilidad,   allowedTypes: ["offer","request"] },
+      peligro:       { emoji: "🚫",  label: "Peligro / Rescate",             svg: SVG_ICONS.peligro,     allowedTypes: ["request"] },         // alerta — no se "ofrece"
+      centro_acopio: { emoji: "📦",  label: "Centro de acopio",              svg: SVG_ICONS.centro,      allowedTypes: ["offer"],
+                       requiresExtra: true },                                                                                                  // solo ofrece + campos obligatorios
     };
 
     // ============================================================
@@ -1003,7 +1119,7 @@
       worldCopyJump: false,
     });
     map.fitBounds(VE_BOUNDS);    // ajuste inicial a la silueta del país
-    L.control.zoom({ position: "topright" }).addTo(map);
+    L.control.zoom({ position: "bottomleft" }).addTo(map);
 
     // Bloqueo defensivo: si por alguna razón el centro queda fuera, lo regresamos
     map.on("drag", () => map.panInsideBounds(VE_BOUNDS, { animate: false }));
@@ -1061,12 +1177,18 @@
     if (navigator.geolocation && window.isSecureContext !== false) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setUserLocation(pos.coords.latitude, pos.coords.longitude, true);
-          showStatus("📍 Ubicación detectada — cerca de ti", "ok", 2000);
+          const lat = pos.coords.latitude, lng = pos.coords.longitude;
+          if (coordsInVE(lat, lng)) {
+            setUserLocation(lat, lng, true);
+            showStatus("Ubicación detectada — cerca de ti", "ok", 2000);
+          } else {
+            // Coordenadas fuera de VE → probable VPN activa
+            showStatus("Tu ubicación aparece fuera de Venezuela (¿VPN activa?). Usa el buscador para navegar.", "err", 6000);
+          }
         },
         (err) => {
           if (err.code === err.PERMISSION_DENIED) {
-            showStatus("Ubicación denegada. Usa el botón 📍 o el buscador.", "err", 4000);
+            showStatus("Ubicación denegada. Usa el botón de ubicación o el buscador.", "err", 4000);
           }
         },
         { timeout: 8000, maximumAge: 60000, enableHighAccuracy: true }
@@ -1085,8 +1207,58 @@
     let activeFilter  = "all";   // "all" | "type:offer" | "type:request" | <categoria>
     let selectedType  = "offer"; // "offer" | "request" — tipo elegido en el modal
 
-    // marker -> { layer, category, report_type, created_at }
+    // marker -> { layer, category, report_type, created_at, cg? }
     const markers = [];
+
+    // ============================================================
+    // CLUSTERING — un MarkerClusterGroup por categoría
+    // Los centros y hospitales siguen siendo layers directos (son pocos)
+    // ============================================================
+    const CAT_CLUSTER_COLOR = {
+      energia:       '#f59e0b',
+      senal:         '#3b82f6',
+      suministros:   '#0284c7',
+      asistencia:    '#ef4444',
+      movilidad:     '#7c3aed',
+      peligro:       '#eab308',
+      centro_acopio: '#0ea5e9',
+      centro:        '#0ea5e9',
+      hospital:      '#dc2626',
+    };
+    const clusterGroups = {};
+
+    function getOrCreateCluster(category) {
+      if (clusterGroups[category]) return clusterGroups[category];
+      const color = CAT_CLUSTER_COLOR[category] || '#6b7280';
+      const icon  = SVG_ICONS[category] || SVG_ICONS.suministros;
+      const cg = L.markerClusterGroup({
+        iconCreateFunction: (cluster) => {
+          const n = cluster.getChildCount();
+          return L.divIcon({
+            html: `<div style="
+              position:relative;width:44px;height:44px;border-radius:50%;
+              background:${color};
+              display:flex;align-items:center;justify-content:center;flex-direction:column;
+              border:3px solid rgba(255,255,255,0.85);
+              box-shadow:0 3px 14px rgba(0,0,0,0.5);">
+              <span style="color:#fff;font-size:13px;font-weight:800;line-height:1;">${n}</span>
+            </div>`,
+            className: '',
+            iconSize: [44, 44],
+            iconAnchor: [22, 22],
+          });
+        },
+        disableClusteringAtZoom: 14,
+        showCoverageOnHover: false,
+        maxClusterRadius: 70,
+        spiderfyOnMaxZoom: true,
+        animate: true,
+        chunkedLoading: true,
+      });
+      clusterGroups[category] = cg;
+      map.addLayer(cg);
+      return cg;
+    }
 
     function showToast(msg) { toast.textContent = msg; toast.classList.add("show"); }
     function hideToast()    { toast.classList.remove("show"); }
@@ -1194,19 +1366,24 @@
       const type = r.report_type || "offer";
       const tl = typeLabel(type);
       const note = r.note ? `<br><span style="color:#fff">${escapeHtml(r.note)}</span>` : "";
-      const waText = `${tl.txt}: ${cat.label}\n${r.note ? r.note + "\n" : ""}Ubicación: ${gmapsUrl(r.lat, r.lng)}\n\nMás info en ${SITE_URL}`;
+      const phoneHtml = r.contact_phone
+        ? `<div style="font-size:12px;margin-top:4px;"><b>Contacto:</b> ${renderContacto(r.contact_phone)}</div>`
+        : "";
+      const waText = `${tl.txt}: ${cat.label}\n${r.note ? r.note + "\n" : ""}${r.contact_phone ? "Tel: " + r.contact_phone + "\n" : ""}Ubicación: ${gmapsUrl(r.lat, r.lng)}\n\nMás info en ${SITE_URL}`;
       const layer = L.marker([r.lat, r.lng], { icon: makeIcon(r.category, type) })
         .bindPopup(
           `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
-          `<b>${cat.emoji} ${cat.label}</b>${note}<br>` +
-          `<small>${timeAgo(r.created_at)}</small><br>` +
+          `<b>${cat.emoji} ${cat.label}</b>${note}` +
+          phoneHtml +
+          `<br><small>${timeAgo(r.created_at)}</small><br>` +
           gmapsLink(r.lat, r.lng) + waShareButton(waText) +
           confirmRow(r.id, r.confirmations) +
           (type === "request" ? fulfillRow(r.id, r.fulfill_count) : "")
         );
-      const entry = { layer, id: r.id, category: r.category, report_type: type, created_at: r.created_at };
+      const cg = getOrCreateCluster(r.category);
+      const entry = { layer, id: r.id, category: r.category, report_type: type, created_at: r.created_at, cg };
       markers.push(entry);
-      if (matchesFilter(entry, activeFilter)) map.addLayer(layer);
+      if (matchesFilter(entry, activeFilter)) cg.addLayer(layer);
     }
 
     function escapeHtml(s) {
@@ -1271,15 +1448,24 @@
       if (solicitan)  parts.push(`<span>${STAT_SVGS.solicitan} ${solicitan} solicitan</span>`);
       el.innerHTML = parts.join("");
     }
-    // Refrescar cada 2.5s durante el ciclo de carga (los loaders pueblan en async)
-    setInterval(updateHeroStats, 2500);
+    // Refrescar cada 5s (menos presión en mobile)
+    setInterval(updateHeroStats, 5000);
 
     function repaintFilters() {
+      // Vaciar todos los clusters y repoblar con los que coinciden
+      Object.values(clusterGroups).forEach(cg => cg.clearLayers());
+
       markers.forEach(m => {
         const should = matchesFilter(m, activeFilter);
-        const hasIt  = map.hasLayer(m.layer);
-        if (should && !hasIt) map.addLayer(m.layer);
-        if (!should && hasIt) map.removeLayer(m.layer);
+        if (m.cg) {
+          // Reporte ciudadano clusterizado
+          if (should) m.cg.addLayer(m.layer);
+        } else {
+          // Centros / hospitales → layer directo en el mapa
+          const hasIt = map.hasLayer(m.layer);
+          if (should && !hasIt) map.addLayer(m.layer);
+          if (!should && hasIt) map.removeLayer(m.layer);
+        }
       });
       updateHeroStats();
     }
@@ -1316,6 +1502,19 @@
       document.querySelectorAll(".type-tab").forEach(tab =>
         tab.classList.toggle("active", tab.dataset.type === t)
       );
+      // Mostrar solo categorías permitidas para este tipo (oculta peligro en offer,
+      // oculta centro_acopio en request, etc.)
+      document.querySelectorAll(".cat-btn[data-allowed]").forEach(btn => {
+        const allowed = (btn.dataset.allowed || "").split(",");
+        btn.style.display = allowed.includes(t) ? "" : "none";
+      });
+      // Si la categoría centro_acopio queda visible, mostrar sus campos extra al hover/click
+      const centroBtn = document.querySelector('.cat-btn[data-cat="centro_acopio"]');
+      const centroFields = document.getElementById("centroFields");
+      if (centroBtn && centroFields) {
+        // El panel extra solo se muestra cuando el usuario clickee centro (handler abajo)
+        if (centroBtn.style.display === "none") centroFields.style.display = "none";
+      }
       // Actualizar color del FAB si está activo en modo cancelar
       if (reportingMode) {
         fab.classList.remove("offer", "request");
@@ -1343,7 +1542,7 @@
       const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
       const { data, error } = await sb
         .from("reports")
-        .select("id,lat,lng,category,report_type,note,confirmations,fulfilled_at,fulfill_count,created_at")
+        .select("id,lat,lng,category,report_type,note,confirmations,fulfilled_at,fulfill_count,created_at,contact_phone")
         .eq("is_active", true)
         .gte("created_at", since)
         .order("created_at", { ascending: false })
@@ -1365,7 +1564,7 @@
       fab.textContent = "✕ Cancelar";
       fab.classList.add("cancel");
       fab.classList.remove("offer", "request");
-      showToast("📍 Toca el mapa donde quieras reportar");
+      showToast("Toca el mapa donde quieras reportar");
       map.getContainer().style.cursor = "crosshair";
     }
     function exitReportingMode() {
@@ -1376,6 +1575,9 @@
       map.getContainer().style.cursor = "";
       if (pendingMarker) { map.removeLayer(pendingMarker); pendingMarker = null; }
       $("noteInput").value = "";
+      if ($("phoneInput")) $("phoneInput").value = "";
+      if ($("reporterNameInput")) $("reporterNameInput").value = "";
+      if ($("exactAddressInput")) $("exactAddressInput").value = "";
     }
 
     fab.addEventListener("click", () => reportingMode ? exitReportingMode() : enterReportingMode());
@@ -1428,11 +1630,26 @@
       btn.addEventListener("click", async () => {
         if (!pendingLatLng || !sb) { modal.classList.remove("show"); return; }
 
+        // 0) Validar teléfono +58 (obligatorio)
+        const rawPhone = ($("phoneInput")?.value || "").trim();
+        if (!rawPhone) {
+          showStatus("Teléfono de contacto obligatorio (+58...)", "err", 3500);
+          $("phoneInput")?.focus();
+          return;
+        }
+        const phoneDigits = rawPhone.replace(/[\s\-\(\)\+\.]/g, "");
+        if (!/^(58\d{10}|0\d{10})$/.test(phoneDigits)) {
+          showStatus("Teléfono inválido. Ejemplo: +58 412 1234567", "err", 3500);
+          $("phoneInput")?.focus();
+          return;
+        }
+        const phone = rawPhone;
+
         // 1) Cooldown
         const now = Date.now();
         if (now - lastSubmit < COOLDOWN_MS) {
           const wait = Math.ceil((COOLDOWN_MS - (now - lastSubmit)) / 1000);
-          showStatus(`⏱️ Espera ${wait}s antes de otro reporte`, "err", 2500);
+          showStatus(`Espera ${wait}s antes de otro reporte`, "err", 2500);
           return;
         }
 
@@ -1456,7 +1673,7 @@
         const rawNote = $("noteInput").value;
         const note = rawNote.replace(/[\x00-\x1f\x7f]/g, "").trim().slice(0, 280) || null;
 
-        const payload = { lat, lng, category, report_type: selectedType, note, client_fp: CLIENT_FP };
+        const payload = { lat, lng, category, report_type: selectedType, note, client_fp: CLIENT_FP, contact_phone: phone };
         modal.classList.remove("show");
         lastSubmit = now;
 
@@ -1581,14 +1798,19 @@
     // Botón "ubicarme"
     $("locateBtn").addEventListener("click", () => {
       if (!navigator.geolocation) return showStatus("Geolocalización no disponible", "err");
-      $("locateBtn").textContent = "⏳";
+      $("locateBtn").innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke-linecap="round"/></svg>`;
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setUserLocation(pos.coords.latitude, pos.coords.longitude, true);
-          $("locateBtn").textContent = "📍";
+          const lat = pos.coords.latitude, lng = pos.coords.longitude;
+          $("locateBtn").innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="#3b82f6" stroke="#fff" stroke-width="1.5"><path d="M12 22s-7-7.5-7-13a7 7 0 1 1 14 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5" fill="#fff"/></svg>`;
+          if (coordsInVE(lat, lng)) {
+            setUserLocation(lat, lng, true);
+          } else {
+            showStatus("Tu ubicación aparece fuera de Venezuela (¿VPN activa?). Usa el buscador.", "err", 5000);
+          }
         },
         (err) => {
-          $("locateBtn").textContent = "📍";
+          $("locateBtn").innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="#3b82f6" stroke="#fff" stroke-width="1.5"><path d="M12 22s-7-7.5-7-13a7 7 0 1 1 14 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5" fill="#fff"/></svg>`;
           showStatus("Ubicación denegada: " + err.message, "err", 4000);
         },
         { enableHighAccuracy: true, timeout: 8000 }
@@ -1729,16 +1951,16 @@
 
     function renderCentros(list) {
       if (!Array.isArray(list) || !list.length) return 0;
-      const layersToAdd = [];
+      const cg = getOrCreateCluster("centro");
+      let added = 0;
       for (const c of list) {
         const layer = buildCentroLayer(c);
         const entry = { layer, isCentro: true, category: "centro", report_type: null, created_at: null,
-                        centroName: (c.org || c.addr || "") };
+                        centroName: (c.org || c.addr || ""), cg };
         markers.push(entry);
-        if (matchesFilter(entry, activeFilter)) layersToAdd.push(layer);
+        if (matchesFilter(entry, activeFilter)) { cg.addLayer(layer); added++; }
       }
-      layersToAdd.forEach(l => map.addLayer(l));
-      return layersToAdd.length;
+      return added;
     }
 
     async function loadCentros() {
@@ -2121,9 +2343,10 @@
       const tl   = typeLabel(type);
       const extras = [p.descripcion, p.necesitan, p.ofrecen].filter(Boolean).join(" · ");
       const dir    = p.direccion ? `<div style="color:#cbd5e1;font-size:12px;">${escapeHtml(p.direccion)}</div>` : "";
-      const tel    = p.telefono  ? `<div style="font-size:12px;"><b>Tel:</b> ${renderContacto(p.telefono)}</div>` : "";
+      const tel    = p.telefono  ? `<div style="font-size:12px;"><b>Contacto:</b> ${renderContacto(p.telefono)}</div>` : "";
       const horario= p.horario   ? `<div style="font-size:12px;"><b>Horario:</b> ${escapeHtml(p.horario)}</div>` : "";
       const waText = `${tl.txt}: ${cat.label}\n${p.nombre || ""}\n${p.direccion || ""}\n${extras ? extras + "\n" : ""}Ubicación: ${gmapsUrl(p.lat, p.lng)}\n\nMás info en ${SITE_URL}`;
+      const alreadyConf = isConfirmedLocal("ca_" + p.id);
       const layer = L.marker([p.lat, p.lng], { icon: makeIcon(mappedCategory, type) }).bindPopup(
         `<span class="popup-badge ${tl.cls}">${tl.txt}</span><br>` +
         `<b>${cat.emoji} ${cat.label}</b><br>` +
@@ -2131,7 +2354,16 @@
         dir +
         (extras ? `<div style="color:#cbd5e1;font-size:12px;margin-top:4px;">${escapeHtml(extras)}</div>` : "") +
         tel + horario +
-        `<div>${gmapsLink(p.lat, p.lng)}${waShareButton(waText)}</div>` + CA_BADGE
+        `<div>${gmapsLink(p.lat, p.lng)}${waShareButton(waText)}</div>` +
+        `<div class="confirm-row ca-confirm-row" data-ca-id="${escapeHtml(String(p.id))}">
+          <button class="confirm-btn ca-confirm-btn" ${alreadyConf ? "disabled" : ""}>${alreadyConf ? "✓ Confirmado" : "Confirmar"}</button>
+          <span class="confirm-count"><strong>0</strong> confirmaciones</span>
+        </div>` +
+        (type === "request"
+          ? `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #374151;font-size:11px;color:#9ca3af;">
+               Si esta solicitud fue atendida, <a href="#" class="ca-fulfilled-link" data-ca-id="${escapeHtml(String(p.id))}" style="color:#10b981;">márcala aquí</a>.
+             </div>`
+          : "")
       );
       return layer;
     }
@@ -2166,10 +2398,11 @@
           const k = normalizeHospName(p.nombre || "");
           if (k && existingCentroKeys.has(k)) { skipped++; continue; }
           const layer = buildCAExternalCentro(p);
+          const cgC = getOrCreateCluster("centro");
           const entry = { layer, isCentro: true, category: "centro", report_type: null, created_at: null,
-                          centroName: p.nombre || "", source: "ca", isExternal: true };
+                          centroName: p.nombre || "", source: "ca", isExternal: true, cg: cgC };
           markers.push(entry);
-          if (matchesFilter(entry, activeFilter)) map.addLayer(layer);
+          if (matchesFilter(entry, activeFilter)) cgC.addLayer(layer);
           if (k) existingCentroKeys.add(k);
           addedC++;
         } else {
@@ -2183,18 +2416,128 @@
 
           const type = p.tipo === "necesidad" ? "request" : "offer";
           const layer = buildCAExternalReport(p, mapped);
+          const cg = getOrCreateCluster(mapped);
           const entry = { layer, category: mapped, report_type: type, created_at: null,
-                          source: "ca", isExternal: true };
+                          source: "ca", isExternal: true, cg };
           markers.push(entry);
-          if (matchesFilter(entry, activeFilter)) map.addLayer(layer);
+          if (matchesFilter(entry, activeFilter)) cg.addLayer(layer);
           addedR++;
         }
       }
-      // Solo mostramos centros en el toast — los reportes se ven directo en los hero stats
       if (addedC > 0) {
         showStatus(`+${addedC} centros adicionales cargados`, "ok", 3000);
       }
+      // Sincronizar a nuestra Supabase (máx 1 vez cada 30 min, en background)
+      if (shouldSyncExternal()) {
+        upsertCaracasAyudaToSupabase(points).catch(e => console.warn("sync:", e.message));
+      }
     }
+    // ============================================================
+    // UPSERT DE FUENTES EXTERNAS → NUESTRA SUPABASE
+    // Requiere ejecutar en Supabase SQL:
+    //   ALTER TABLE reports ADD COLUMN IF NOT EXISTS source text DEFAULT 'user';
+    //   ALTER TABLE reports ADD COLUMN IF NOT EXISTS external_id text;
+    //   ALTER TABLE reports ADD COLUMN IF NOT EXISTS external_source text;
+    //   ALTER TABLE reports ADD COLUMN IF NOT EXISTS contact_phone text;
+    //   CREATE UNIQUE INDEX IF NOT EXISTS reports_external_idx
+    //     ON reports(external_source, external_id)
+    //     WHERE external_source IS NOT NULL AND external_id IS NOT NULL;
+    // ============================================================
+    const LAST_EXTERNAL_SYNC_KEY = "pa_ext_sync_v1";
+    const EXTERNAL_SYNC_INTERVAL_MS = 30 * 60 * 1000; // 30 min
+
+    function shouldSyncExternal() {
+      try {
+        const t = Number(localStorage.getItem(LAST_EXTERNAL_SYNC_KEY) || 0);
+        return Date.now() - t > EXTERNAL_SYNC_INTERVAL_MS;
+      } catch { return true; }
+    }
+    function markExternalSynced() {
+      try { localStorage.setItem(LAST_EXTERNAL_SYNC_KEY, String(Date.now())); } catch {}
+    }
+
+    async function upsertCaracasAyudaToSupabase(points) {
+      if (!sb || !points.length) return;
+      const rows = [];
+      for (const p of points) {
+        if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
+        if (p.lat < -1 || p.lat > 17 || p.lng < -75 || p.lng > -58) continue;
+        const mapped = CA_CAT_MAP[p.categoria];
+        if (mapped === undefined || mapped === null) continue;
+        const category = mapped === "_centro" ? "centro_acopio" : mapped;
+        const note = [p.descripcion, p.necesitan, p.ofrecen].filter(Boolean).join(" · ").slice(0, 280) || null;
+        rows.push({
+          lat: p.lat, lng: p.lng, category,
+          report_type: p.tipo === "necesidad" ? "request" : "offer",
+          note,
+          contact_phone: p.telefono || null,
+          source: "ca",
+          external_id: String(p.id),
+          external_source: "caracasayuda",
+          is_active: true,
+          client_fp: "external_ca",
+        });
+      }
+      if (!rows.length) return;
+      // Verificar que las columnas existen antes de upsert
+      let success = true;
+      for (let i = 0; i < rows.length; i += 50) {
+        const chunk = rows.slice(i, i + 50);
+        const { error } = await sb.from("reports").upsert(chunk, { onConflict: "external_source,external_id" });
+        if (error) {
+          console.warn("CA→Supabase upsert:", error.message);
+          if (/column|schema|not found/i.test(error.message)) {
+            console.warn("Ejecuta el SQL de migración en Supabase: ADD COLUMN external_id, external_source, source, contact_phone");
+          }
+          success = false;
+          break;
+        }
+        await new Promise(r => setTimeout(r, 200));
+      }
+      if (success) {
+        markExternalSynced();
+        console.info(`CA upsert: ${rows.length} puntos sincronizados`);
+      }
+    }
+
+    // Handler de confirmar para puntos externos (CA)
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".ca-confirm-btn");
+      if (!btn || btn.disabled) return;
+      const row = btn.closest(".ca-confirm-row");
+      const caId = row?.dataset?.caId;
+      if (!caId || !sb) return;
+
+      const localKey = "ca_" + caId;
+      if (isConfirmedLocal(localKey)) { btn.disabled = true; btn.textContent = "✓ Confirmado"; return; }
+
+      btn.disabled = true; btn.textContent = "…";
+      // Buscar el ID interno en nuestra DB
+      const { data: rec } = await sb.from("reports")
+        .select("id, confirmations")
+        .eq("external_source", "caracasayuda")
+        .eq("external_id", caId)
+        .single();
+
+      if (!rec) {
+        showStatus("Punto aún no sincronizado — inténtalo en unos minutos", "err", 3500);
+        btn.disabled = false; btn.textContent = "Confirmar";
+        return;
+      }
+      const { data: newCount, error } = await sb.rpc("confirm_report", { p_report: rec.id, p_fp: CLIENT_FP });
+      if (error) {
+        showStatus("No se pudo confirmar", "err", 3000);
+        btn.disabled = false; btn.textContent = "Confirmar";
+        return;
+      }
+      markConfirmedLocal(localKey);
+      btn.textContent = "✓ Confirmado";
+      const cnt = row.querySelector(".confirm-count");
+      const n = Number(newCount) || 0;
+      if (cnt) cnt.innerHTML = `<strong>${n}</strong> ${n === 1 ? "confirmación" : "confirmaciones"}`;
+      showStatus("Gracias por confirmar", "ok", 2000);
+    });
+
     // Disparar 2.5s después del init (después de centros y antes de Nominatim del resto)
     setTimeout(loadCaracasAyudaPoints, 2500);
 
@@ -2406,21 +2749,20 @@
       }
 
       // 2) Dibujar los que tienen coords del dict (instantáneo)
-      const layersToAdd = [];
+      const cgHosp = getOrCreateCluster("hospital");
       const pending = [];
       for (const slot of Object.values(agg)) {
         if (slot.coords) {
           const layer = L.marker([slot.coords.lat, slot.coords.lng], { icon: makeHospitalIcon() })
             .bindPopup(buildHospitalPopup(slot.display, slot.count, { bloodDonors: !!slot.coords?.bloodDonors }));
           const entry = { layer, isHospital: true, category: "hospital", hospitalName: slot.display,
-                          hospitalCount: slot.count, hospitalCoords: slot.coords || null };
+                          hospitalCount: slot.count, hospitalCoords: slot.coords || null, cg: cgHosp };
           markers.push(entry);
-          if (matchesFilter(entry, activeFilter)) layersToAdd.push(layer);
+          if (matchesFilter(entry, activeFilter)) cgHosp.addLayer(layer);
         } else {
           pending.push([slot.display, slot.count]);
         }
       }
-      layersToAdd.forEach(l => map.addLayer(l));
 
       // 3) Geocodificar los desconocidos con Nominatim (1 req/seg, con variantes)
       for (const [name, count] of pending) {
@@ -2429,9 +2771,9 @@
         const layer = L.marker([coords.lat, coords.lng], { icon: makeHospitalIcon() })
           .bindPopup(buildHospitalPopup(name, count));
         const entry = { layer, isHospital: true, category: "hospital", hospitalName: name,
-                        hospitalCount: count, hospitalCoords: null };
+                        hospitalCount: count, hospitalCoords: null, cg: cgHosp };
         markers.push(entry);
-        if (matchesFilter(entry, activeFilter)) map.addLayer(layer);
+        if (matchesFilter(entry, activeFilter)) cgHosp.addLayer(layer);
         await new Promise(r => setTimeout(r, 1100));
       }
     }
