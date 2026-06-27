@@ -324,6 +324,7 @@
     }
     .cat-btn:active { background: #1a1a1a; }
     .cat-btn:hover  { background: #1a1a1a; }
+    .cat-btn.selected { border-color: var(--accent); background: #0d1f3c; }
     .cat-btn .emoji { font-size: 22px; width: 28px; text-align: center; }
     .cat-btn .cat-ico {
       flex: 0 0 32px; height: 32px; width: 32px;
@@ -1033,7 +1034,13 @@
         style="width:100%; margin-top:10px; padding:10px; background:#111; color:#fff;
                border:1px solid var(--border); border-radius:10px; font-size:13px;
                font-family:inherit; resize:none; min-height:50px;"></textarea>
-      <button class="cancel-btn" id="modalCancel">Cancelar</button>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button class="cancel-btn" id="modalCancel" style="flex:1;">Cancelar</button>
+        <button id="submitBtn" style="flex:2; padding:12px; border-radius:10px; background:var(--accent);
+          color:#fff; border:none; font-size:14px; font-weight:700; cursor:pointer; opacity:0.4; pointer-events:none;">
+          Publicar punto
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1598,11 +1605,23 @@
       modal.classList.add("show");
     });
 
+    function resetModalState() {
+      selectedCategory = null;
+      document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("selected"));
+      const centroFields = $("centroFields");
+      if (centroFields) centroFields.style.display = "none";
+      $("noteInput").value = "";
+      $("phoneInput").value = "";
+      if ($("reporterNameInput")) $("reporterNameInput").value = "";
+      if ($("exactAddressInput")) $("exactAddressInput").value = "";
+      updateSubmitBtn();
+    }
+
     function closeModalKeepMarker() {
       modal.classList.remove("show");
       if (pendingMarker) { map.removeLayer(pendingMarker); pendingMarker = null; }
       pendingLatLng = null;
-      $("noteInput").value = "";
+      resetModalState();
     }
 
     $("modalCancel").addEventListener("click", closeModalKeepMarker);
@@ -1634,54 +1653,100 @@
           && lat >= -1 && lat <= 17 && lng >= -75 && lng <= -58;
     }
 
+    let selectedCategory = null;
+
+    function updateSubmitBtn() {
+      const btn = $("submitBtn");
+      if (!btn) return;
+      const enabled = !!selectedCategory;
+      btn.style.opacity = enabled ? "1" : "0.4";
+      btn.style.pointerEvents = enabled ? "auto" : "none";
+    }
+
     document.querySelectorAll(".cat-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        selectedCategory = btn.dataset.cat;
+        // Mostrar campos extra solo para centro de acopio
+        const centroFields = $("centroFields");
+        if (centroFields) {
+          centroFields.style.display = selectedCategory === "centro_acopio" ? "flex" : "none";
+        }
+        updateSubmitBtn();
+      });
+    });
+
+    $("submitBtn")?.addEventListener("click", async () => {
         if (!pendingLatLng || !sb) { modal.classList.remove("show"); return; }
 
-        // 0) Validar teléfono +58 (obligatorio)
+        // 0) Categoría seleccionada
+        if (!selectedCategory) {
+          showStatus("Selecciona una categoría antes de publicar.", "err", 3000);
+          return;
+        }
+
+        // 1) Teléfono +58 obligatorio
         const rawPhone = ($("phoneInput")?.value || "").trim();
         if (!rawPhone) {
-          showStatus("Teléfono de contacto obligatorio (+58...)", "err", 3500);
-          $("phoneInput")?.focus();
-          return;
+          showStatus("El teléfono de contacto es obligatorio (+58 412 1234567).", "err", 3500);
+          $("phoneInput")?.focus(); return;
         }
         const phoneDigits = rawPhone.replace(/[\s\-\(\)\+\.]/g, "");
         if (!/^(58\d{10}|0\d{10})$/.test(phoneDigits)) {
           showStatus("Teléfono inválido. Ejemplo: +58 412 1234567", "err", 3500);
-          $("phoneInput")?.focus();
-          return;
+          $("phoneInput")?.focus(); return;
         }
         const phone = rawPhone;
 
-        // 1) Cooldown
+        // 2) Campos obligatorios de centro de acopio
+        if (selectedCategory === "centro_acopio") {
+          const name = ($("reporterNameInput")?.value || "").trim();
+          const addr = ($("exactAddressInput")?.value || "").trim();
+          if (!name) {
+            showStatus("Ingresa tu nombre y apellido para registrar el centro.", "err", 3500);
+            $("reporterNameInput")?.focus(); return;
+          }
+          if (!addr) {
+            showStatus("Ingresa la dirección exacta del centro de acopio.", "err", 3500);
+            $("exactAddressInput")?.focus(); return;
+          }
+        }
+
+        // 3) Cooldown
         const now = Date.now();
         if (now - lastSubmit < COOLDOWN_MS) {
           const wait = Math.ceil((COOLDOWN_MS - (now - lastSubmit)) / 1000);
-          showStatus(`Espera ${wait}s antes de otro reporte`, "err", 2500);
-          return;
+          showStatus(`Espera ${wait}s antes de otro reporte`, "err", 2500); return;
         }
 
-        // 2) Validar coordenadas
+        // 4) Coordenadas dentro de Venezuela
         const lat = pendingLatLng.lat, lng = pendingLatLng.lng;
         if (!coordsInVE(lat, lng)) {
-          showStatus("❌ Coordenadas fuera de Venezuela", "err", 4000);
-          return;
+          showStatus("Coordenadas fuera de Venezuela.", "err", 4000); return;
         }
 
-        // 3) Validar categoría (defensa contra DOM manipulado)
-        const category = btn.dataset.cat;
-        if (!CATEGORIES[category]) {
-          showStatus("❌ Categoría inválida", "err", 3000); return;
-        }
-        if (!["offer", "request"].includes(selectedType)) {
-          showStatus("❌ Tipo inválido", "err", 3000); return;
+        const category = selectedCategory;
+        if (!CATEGORIES[category] || !["offer","request"].includes(selectedType)) {
+          showStatus("Datos inválidos, intenta de nuevo.", "err", 3000); return;
         }
 
-        // 4) Sanitizar nota
+        // 5) Sanitizar nota
         const rawNote = $("noteInput").value;
         const note = rawNote.replace(/[\x00-\x1f\x7f]/g, "").trim().slice(0, 280) || null;
 
-        const payload = { lat, lng, category, report_type: selectedType, note, client_fp: CLIENT_FP, contact_phone: phone };
+        const payload = {
+          lat, lng, category,
+          report_type: selectedType,
+          note,
+          client_fp: CLIENT_FP,
+          contact_phone: phone,
+          ...(category === "centro_acopio" ? {
+            reporter_name: ($("reporterNameInput")?.value || "").trim(),
+            exact_address: ($("exactAddressInput")?.value || "").trim(),
+          } : {}),
+        };
+
         modal.classList.remove("show");
         lastSubmit = now;
 
@@ -1690,11 +1755,10 @@
         if (pendingMarker) { map.removeLayer(pendingMarker); pendingMarker = null; }
 
         if (error) {
-          // No exponer detalles internos al usuario
           const isRate = /rate_limit/i.test(error.message);
           showStatus(isRate
-            ? "🛑 Demasiados reportes seguidos. Intenta en unos minutos."
-            : "❌ No se pudo guardar el reporte.", "err", 5000);
+            ? "Demasiados reportes seguidos. Intenta en unos minutos."
+            : "No se pudo guardar el reporte. Intenta de nuevo.", "err", 5000);
           console.error("Insert error:", error);
           lastSubmit = 0;
           exitReportingMode();
@@ -1702,11 +1766,10 @@
         }
         addReportToMap(data);
         const msg = selectedType === "request"
-          ? "🆘 Solicitud publicada, ¡suerte!"
-          : "✅ Recurso publicado, ¡gracias!";
+          ? "Solicitud publicada, ¡suerte!"
+          : "Recurso publicado, ¡gracias!";
         showStatus(msg, "ok");
         exitReportingMode();
-      });
     });
 
     // ============================================================

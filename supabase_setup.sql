@@ -50,14 +50,13 @@ do $$ begin
     alter table public.reports add constraint reports_exact_address_len
       check (exact_address is null or length(exact_address) between 5 and 280);
   end if;
-  -- Si es centro_acopio: obligatoriamente requiere phone, reporter_name y exact_address
-  if not exists (select 1 from pg_constraint where conname = 'reports_centro_acopio_required') then
-    alter table public.reports add constraint reports_centro_acopio_required
-      check (
-        category <> 'centro_acopio'
-        or (phone is not null and reporter_name is not null and exact_address is not null)
-      );
-  end if;
+  -- Si es centro_acopio: requiere contact_phone, reporter_name y exact_address
+  alter table public.reports drop constraint if exists reports_centro_acopio_required;
+  alter table public.reports add constraint reports_centro_acopio_required
+    check (
+      category <> 'centro_acopio'
+      or (contact_phone is not null and reporter_name is not null and exact_address is not null)
+    );
   -- Peligro solo puede ser request (alerta de zona peligrosa, nadie "ofrece" peligro)
   if not exists (select 1 from pg_constraint where conname = 'reports_peligro_only_request') then
     alter table public.reports add constraint reports_peligro_only_request
@@ -170,7 +169,7 @@ create policy "anon_insert_valid"
     and lat between -1 and 17
     and lng between -75 and -58
     and (note is null or length(note) <= 280)
-    and (phone is null or length(phone) between 7 and 20)
+    and (contact_phone is null or length(contact_phone) between 7 and 25)
     and (reporter_name is null or length(reporter_name) between 2 and 80)
     and (exact_address is null or length(exact_address) between 5 and 280)
   );
