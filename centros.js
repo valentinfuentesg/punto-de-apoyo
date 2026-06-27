@@ -29,6 +29,13 @@ window.CENTROS = [
   { org: "UCAB Guayana", addr: "Planta alta casa del estudiante, Dirección de Desarrollo Estudiantil UCAB Guayana", lat: 8.297484945811043, lng: -62.71152284539116, ciudad: "Puerto Ordaz", acepta: "Cajas, bolsas negras, botellas vacías de 5L, alimentos no perecederos, agua potable, gasas, insumos médicos, cascos, guantes, higiene, calzado y ropa", contacto: "0424-9147305" },
   { org: "Gobierno de Venezuela", addr: "Casa de la Mujer", lat: 8.000095787770984, lng: -62.39374026263498, ciudad: "Upata", acepta: "Alimentos no perecederos, agua, medicamentos y ropa en buen estado", contacto: "" },
 
+  // ===== LA GUAIRA / LITORAL / VARGAS =====
+  { org: "Punto de Coordinación de Emergencia", addr: "Polideportivo José María Vargas, Av. Carlos Soublette, Urb. José María Vargas, Pariata", lat: 10.6009294, lng: -66.9688849, ciudad: "La Guaira", acepta: "Agua, alimentos no perecederos, insumos médicos, ropa, abrigos", contacto: "" },
+  { org: "MRW La Guaira", addr: "Av. La Costanera, C.C. Costa del Sol, nivel planta baja, local N° 13, Urb. Caribe, Caraballeda", lat: 10.618341, lng: -66.84596, ciudad: "Caraballeda (La Guaira)", acepta: "Agua, alimentos, medicinas, ropa, higiene, artículos para bebés y mascotas", contacto: "0424-1941358" },
+  { org: "Cuerpo de Bomberos Aeronáuticos", addr: "Av. Principal del Aeropuerto, Santa Eduvigis, Catia La Mar", lat: 10.6007090, lng: -66.9978007, ciudad: "Catia La Mar (La Guaira)", acepta: "Punto de coordinación de emergencia", contacto: "" },
+  { org: "PNB / DIP — Punto de Coordinación", addr: "Av. Principal de Playa Grande, Catia La Mar (Oficina de la DIP – PNB)", lat: 10.6088372, lng: -67.0159933, ciudad: "Playa Grande, Catia La Mar", acepta: "Punto de coordinación de emergencia y seguridad", contacto: "" },
+  { org: "Terminal de Oriente — Coordinación", addr: "Terminal de Oriente, Autopista Gran Mariscal de Ayacucho, Petare (punto de distribución hacia el Litoral)", lat: 10.4975694, lng: -66.7761831, ciudad: "Petare, Caracas", acepta: "Centro de distribución y traslado de ayuda hacia La Guaira / Litoral", contacto: "" },
+
   // ===== CARACAS / DISTRITO CAPITAL / MIRANDA =====
   { org: "Rescatistas y vecinos", addr: "Edificio Petunia, Av Francisco de Miranda entre Los Palos Grandes y Altamira", lat: 10.497912389016717, lng: -66.8477711386003, ciudad: "Caracas", acepta: "Agua, alimentos no perecederos", contacto: "" },
   { org: "Rescatistas y vecinos", addr: "Altamira, frente a la sede de la CAF", lat: 10.498929331667387, lng: -66.84832596634126, ciudad: "Caracas", acepta: "Agua, alimentos no perecederos", contacto: "Victoria Castillo 0412-1937746 / Desireé Lugo 0424-9050118" },

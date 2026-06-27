@@ -2236,6 +2236,94 @@
     else setTimeout(loadCentros, 50);
 
     // ============================================================
+    // AYUDA PARA VENEZUELA — sync de centros desde CSV público
+    // https://ayudaparavenezuela.com/api/public/centers/csv
+    // ============================================================
+    const APV_URL   = "https://ayudaparavenezuela.com/api/public/centers/csv";
+    const APV_CACHE = "apv_centros_v1";
+    const APV_TTL   = 30 * 60 * 1000; // 30 min
+
+    function parseAPVCsv(text) {
+      const lines = text.trim().split("\n");
+      if (lines.length < 2) return [];
+      const header = lines[0].split(",");
+      const idx = k => header.indexOf(k);
+      const iName = idx("name"), iOrg = idx("organization"), iCity = idx("city"),
+            iAddr = idx("address"), iLat = idx("latitude"), iLng = idx("longitude"),
+            iPhone = idx("phone"), iSched = idx("schedule"), iSupply = idx("supply_types"),
+            iActive = idx("is_active"), iId = idx("id");
+      const results = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].match(/("(?:[^"]|"")*"|[^,]*)/g).map(c =>
+          c.startsWith('"') ? c.slice(1,-1).replace(/""/g,'"') : c);
+        if (cols[iActive]?.toLowerCase() !== "true") continue;
+        const lat = parseFloat(cols[iLat]), lng = parseFloat(cols[iLng]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        if (lat < -1 || lat > 17 || lng < -75 || lng > -58) continue;
+        const supply = (cols[iSupply] || "").replace(/\|/g, ", ");
+        const contacto = [cols[iPhone], cols[iSched]].filter(v => v && v !== "N/A").join(" · ");
+        results.push({
+          org:          cols[iOrg] || cols[iName] || "AyudaParaVenezuela",
+          addr:         cols[iAddr] || "",
+          lat, lng,
+          ciudad:       cols[iCity] || "",
+          acepta:       supply || null,
+          contacto:     contacto || null,
+          external_key: cols[iId] || null,
+        });
+      }
+      return results;
+    }
+
+    async function upsertAPVCentrosToSupabase(list) {
+      if (!sb || !list.length) return;
+      const rows = list.map(c => ({
+        org: c.org, addr: c.addr, lat: c.lat, lng: c.lng,
+        ciudad: c.ciudad, acepta: c.acepta, contacto: c.contacto,
+        source: "apv", external_key: c.external_key,
+      }));
+      for (let i = 0; i < rows.length; i += 50) {
+        const { error } = await sb.from("centros").upsert(rows.slice(i, i+50), { onConflict: "source,external_key" });
+        if (error) { console.warn("APV centros→Supabase:", error.message); return; }
+        await new Promise(r => setTimeout(r, 150));
+      }
+      console.info(`APV centros→Supabase: ${rows.length} centros sincronizados`);
+    }
+
+    async function loadAPVCentros() {
+      // 1) Caché local primero
+      let cached = null;
+      try {
+        const raw = localStorage.getItem(APV_CACHE);
+        if (raw) { const o = JSON.parse(raw); if (Date.now() - o.t < APV_TTL) cached = o.data; }
+      } catch {}
+      if (cached?.length) {
+        renderCentros(cached);
+        // refrescar en background
+        fetch(APV_URL).then(r => r.text()).then(txt => {
+          const fresh = parseAPVCsv(txt);
+          if (!fresh.length) return;
+          try { localStorage.setItem(APV_CACHE, JSON.stringify({ t: Date.now(), data: fresh })); } catch {}
+          upsertAPVCentrosToSupabase(fresh);
+        }).catch(() => {});
+        return;
+      }
+      // 2) Sin caché — fetch directo
+      try {
+        const res = await fetch(APV_URL);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const fresh = parseAPVCsv(await res.text());
+        if (!fresh.length) return;
+        try { localStorage.setItem(APV_CACHE, JSON.stringify({ t: Date.now(), data: fresh })); } catch {}
+        renderCentros(fresh);
+        upsertAPVCentrosToSupabase(fresh).catch(() => {});
+      } catch (e) {
+        console.warn("APV centros: no disponible —", e.message);
+      }
+    }
+    setTimeout(loadAPVCentros, 1500);
+
+    // ============================================================
     // PANEL "BUSCAR PERSONA"
     const buscarPanel = $("buscarPanel");
     $("buscarBtn").addEventListener("click", () => buscarPanel.classList.add("show"));
