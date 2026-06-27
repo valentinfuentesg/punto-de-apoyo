@@ -12,7 +12,7 @@
 A single-file web app (`index.html`) that shows on a map:
 
 - Hospitals with patient counts and blood donor requests
-- Official collection centers (centros de acopio) geocoded from public lists
+- Official collection centers (centros de acopio) from verified public sources
 - Citizen offers (water, power, transport, supplies, etc.)
 - Citizen requests (medical help, transport, food, etc.)
 - Danger zones / rescue situations
@@ -47,9 +47,9 @@ Users can **report points anonymously**, **confirm** verified info, and **mark r
 |---|---|---|---|
 | OpenStreetMap | Tiles + geocoding | — | © OpenStreetMap contributors (ODbL) |
 | CartoDB Voyager | Map tiles | — | © CARTO |
-| Google Sheets (centers) | Collection center list | 5 min | Public community-maintained list |
+| [ayudaparavenezuela.com](https://ayudaparavenezuela.com) | Collection centers (verified, `is_active`) | 30 min | Free use with attribution |
 | Google Sheets (hospitals) | Patient counts | 15 min | Public community-maintained list |
-| [caracasayuda.com](https://caracasayuda.com) | Centers + reports (Supabase) | 30 min | Caracas Merch initiative, attribution shown |
+| [caracasayuda.com](https://caracasayuda.com) | Citizen reports (Supabase) | 30 min | Caracas Merch initiative, attribution shown |
 | [localizadosvenezuela.com](https://localizadosvenezuela.com) | Hospitals + located persons count | On-load | MIT, by Giuseppe Gangi |
 
 All integrated data is **read-only** from public APIs or public sheets. If your platform wants to integrate or opt out, open an issue or reach out on X.
@@ -102,8 +102,9 @@ Any PR is welcome, especially:
 
 Built with AI assistance (Claude). Inspired and enriched by the work of many communities:
 
-- [caracasayuda.com](https://caracasayuda.com) (Caracas Merch)
-- [localizadosvenezuela.com](https://localizadosvenezuela.com) (Giuseppe Gangi, [@ggangix](https://twitter.com/ggangix))
+- [ayudaparavenezuela.com](https://ayudaparavenezuela.com) — verified collection center database (primary centro source)
+- [caracasayuda.com](https://caracasayuda.com) (Caracas Merch) — citizen reports integration
+- [localizadosvenezuela.com](https://localizadosvenezuela.com) (Giuseppe Gangi, [@ggangix](https://twitter.com/ggangix)) — hospital data
 - [terremotovenezuela.app](https://terremotovenezuela.app) (Arturo Rios, [open source](https://github.com/ArturoRiosMock/mapa-emergencia-rescate))
 - Comando ConVzla, Caritas, Venezuelan Red Cross, municipalities, NGOs, and thousands of citizens who maintain the public lists.
 

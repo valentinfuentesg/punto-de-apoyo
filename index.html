@@ -916,8 +916,9 @@
 
         <section>
           <p style="text-align:center;color:#6b7280;font-size:11px;">
-            Datos: OpenStreetMap · Carto · listados públicos de centros de acopio.<br>
-            Centros y reportes vía <a href="https://caracasayuda.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">caracasayuda.com</a> ·
+            Datos: OpenStreetMap · Carto<br>
+            Centros de acopio vía <a href="https://ayudaparavenezuela.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">ayudaparavenezuela.com</a> ·
+            Reportes vía <a href="https://caracasayuda.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">caracasayuda.com</a> ·
             Hospitales vía <a href="https://localizadosvenezuela.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">localizadosvenezuela.com</a>
           </p>
         </section>
@@ -2076,15 +2077,24 @@
     function renderCentros(list) {
       if (!Array.isArray(list) || !list.length) return 0;
       const cg = getOrCreateCluster("centro");
-      let added = 0;
+      const painted = []; // coordenadas ya pintadas en esta llamada, para dedup interno de APV
+      let added = 0, skipped = 0;
       for (const c of list) {
         if (!Number.isFinite(c.lat) || !Number.isFinite(c.lng)) continue;
+        const dup = painted.some(p => {
+          const dLat = (c.lat - p.lat) * 111000;
+          const dLng = (c.lng - p.lng) * 111000 * Math.cos(c.lat * Math.PI / 180);
+          return Math.sqrt(dLat * dLat + dLng * dLng) < 80;
+        });
+        if (dup) { skipped++; continue; }
+        painted.push({ lat: c.lat, lng: c.lng });
         const layer = buildCentroLayer(c);
         const entry = { layer, isCentro: true, centroSource: "apv", category: "centro", report_type: null, created_at: null,
                         centroName: (c.org || c.addr || ""), cg };
         markers.push(entry);
         if (matchesFilter(entry, activeFilter)) { cg.addLayer(layer); added++; }
       }
+      if (skipped) console.info(`renderCentros: ${added} pintados, ${skipped} omitidos por dedup (80m)`);
       return added;
     }
 
