@@ -398,7 +398,58 @@ create policy "anon_read_active"
     )
   );
 
--- 8. Limpieza automática (opcional pero recomendado):
+-- ============================================
+-- 8. TABLA centros — centros de acopio de Google Sheets + CaracasAyuda
+-- ============================================
+
+create table if not exists public.centros (
+  id           uuid primary key default gen_random_uuid(),
+  org          text,
+  addr         text,
+  lat          double precision not null,
+  lng          double precision not null,
+  ciudad       text,
+  acepta       text,
+  contacto     text,
+  source       text not null default 'sheets',   -- 'sheets' | 'ca'
+  external_key text,
+  updated_at   timestamptz not null default now()
+);
+
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'centros_lat_range') then
+    alter table public.centros add constraint centros_lat_range check (lat between -1 and 17);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'centros_lng_range') then
+    alter table public.centros add constraint centros_lng_range check (lng between -75 and -58);
+  end if;
+end $$;
+
+create unique index if not exists centros_external_key_idx
+  on public.centros(source, external_key)
+  where external_key is not null;
+
+create index if not exists centros_latlng_idx on public.centros (lat, lng);
+
+alter table public.centros enable row level security;
+
+drop policy if exists "anon_read_centros"   on public.centros;
+drop policy if exists "anon_insert_centros" on public.centros;
+drop policy if exists "anon_update_centros" on public.centros;
+
+create policy "anon_read_centros"
+  on public.centros for select to anon using (true);
+
+create policy "anon_insert_centros"
+  on public.centros for insert to anon
+  with check (source in ('sheets', 'ca') and lat between -1 and 17 and lng between -75 and -58);
+
+create policy "anon_update_centros"
+  on public.centros for update to anon
+  using (source in ('sheets', 'ca'))
+  with check (source in ('sheets', 'ca'));
+
+-- 9. Limpieza automática (opcional pero recomendado):
 --    Borrar reportes con más de 7 días, los lunes a las 3am Caracas.
 --    Requiere extensión pg_cron (Database -> Extensions -> activar pg_cron).
 --    Descomenta si la tienes activa:
