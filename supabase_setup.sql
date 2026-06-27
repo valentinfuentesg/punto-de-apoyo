@@ -383,8 +383,10 @@ create policy "anon_update_external"
   using (source = 'ca' and external_source is not null)
   with check (source = 'ca' and external_source is not null);
 
--- Allow anon to select external rows without the 2-day window restriction
--- (external rows may be older but are still relevant)
+-- SELECT policy: TTL diferenciado por tipo
+--   solicitudes (request): 24h
+--   ofrecimientos (offer): 72h
+--   puntos externos CA: sin límite de tiempo
 drop policy if exists "anon_read_active" on public.reports;
 create policy "anon_read_active"
   on public.reports
@@ -394,7 +396,8 @@ create policy "anon_read_active"
     is_active = true
     and (
       source = 'ca'
-      or created_at > now() - interval '2 days'
+      or (report_type = 'offer'   and created_at > now() - interval '72 hours')
+      or (report_type = 'request' and created_at > now() - interval '24 hours')
     )
   );
 
@@ -449,12 +452,24 @@ create policy "anon_update_centros"
   using (source in ('sheets', 'ca'))
   with check (source in ('sheets', 'ca'));
 
--- 9. Limpieza automática (opcional pero recomendado):
---    Borrar reportes con más de 7 días, los lunes a las 3am Caracas.
+-- Fix: habilitar RLS en la tabla centros (si se creó sin él)
+alter table public.centros enable row level security;
+
+-- 9. Limpieza automática con TTLs diferenciados:
+--    - Solicitudes (request): se borran a las 24h
+--    - Ofrecimientos (offer): se borran a las 72h
 --    Requiere extensión pg_cron (Database -> Extensions -> activar pg_cron).
 --    Descomenta si la tienes activa:
--- select cron.schedule('purge-old-reports', '0 7 * * *',
---   $$ delete from public.reports where created_at < now() - interval '7 days' $$);
+-- select cron.schedule('purge-requests', '0 * * * *',
+--   $$ delete from public.reports
+--      where report_type = 'request'
+--        and source = 'user'
+--        and created_at < now() - interval '24 hours' $$);
+-- select cron.schedule('purge-offers', '0 */6 * * *',
+--   $$ delete from public.reports
+--      where report_type = 'offer'
+--        and source = 'user'
+--        and created_at < now() - interval '72 hours' $$);
 
 -- ============================================
 -- CHECKLIST DE SEGURIDAD POST-INSTALACIÓN:

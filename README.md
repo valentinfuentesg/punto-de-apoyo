@@ -82,7 +82,7 @@ Make sure to:
 - Geolocation happens only in the browser, never sent to any server.
 - Reports store only: lat/lng, category, type, optional note, timestamp. No PII.
 - Anonymous local fingerprint (UUID in localStorage) for rate-limiting and anti-double-vote only.
-- Citizen reports are automatically deleted after 7 days via RLS.
+- Help requests are automatically hidden after 24 hours; offers after 72 hours (enforced by RLS).
 - No third-party cookies. Vercel Analytics is privacy-friendly and first-party.
 
 ## Contributing
