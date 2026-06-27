@@ -2271,6 +2271,13 @@
       maxAgeMs: 10 * 60 * 1000,
     };
 
+    // Resuelve report_type respetando allowedTypes de la categoría destino
+    function caResolveType(tipo, mappedCategory) {
+      const allowed = CATEGORIES[mappedCategory]?.allowedTypes;
+      if (allowed?.length === 1) return allowed[0]; // peligro→request, centro_acopio→offer
+      return tipo === "necesidad" ? "request" : "offer";
+    }
+
     // Mapeo de SUS categorías a las NUESTRAS (null = saltar)
     const CA_CAT_MAP = {
       acopio:       "_centro",         // sentinel: pintar como centro de acopio
@@ -2414,7 +2421,7 @@
           });
           if (dup) { skipped++; continue; }
 
-          const type = p.tipo === "necesidad" ? "request" : "offer";
+          const type = caResolveType(p.tipo, mapped);
           const layer = buildCAExternalReport(p, mapped);
           const cg = getOrCreateCluster(mapped);
           const entry = { layer, category: mapped, report_type: type, created_at: null,
@@ -2468,7 +2475,7 @@
         const note = [p.descripcion, p.necesitan, p.ofrecen].filter(Boolean).join(" · ").slice(0, 280) || null;
         rows.push({
           lat: p.lat, lng: p.lng, category,
-          report_type: p.tipo === "necesidad" ? "request" : "offer",
+          report_type: caResolveType(p.tipo, category),
           note,
           contact_phone: p.telefono || null,
           source: "ca",
