@@ -1691,6 +1691,7 @@
         .select("id,lat,lng,category,report_type,note,confirmations,fulfilled_at,fulfill_count,created_at,contact_phone")
         .eq("is_active", true)
         .gte("created_at", since)
+        .not("source", "eq", "ca")   // CA centros se renderizan desde loadCaracasAyudaPoints(), no duplicar
         .order("created_at", { ascending: false })
         .limit(1000);
       const data = raw?.filter(r =>
