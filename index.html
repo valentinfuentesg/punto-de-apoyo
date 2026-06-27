@@ -1484,7 +1484,7 @@
 
       // Dedup render: omitir si ya hay un pin de la misma categoría y tipo a menos de 20m
       const dupRender = markers.find(m => {
-        if (m.isCentro || m.isHospital || m.category !== r.category || m.report_type !== (r.report_type || "offer")) return false;
+        if ((m.isCentro && m.centroSource) || m.isHospital || m.category !== r.category || m.report_type !== (r.report_type || "offer")) return false;
         if (m.lat == null || m.lng == null) return false;
         const dLat = (r.lat - m.lat) * 111000;
         const dLng = (r.lng - m.lng) * 111000 * Math.cos(r.lat * Math.PI / 180);
@@ -1726,7 +1726,8 @@
       // Limpiar reportes ciudadanos antes de recargar — evita acumulación en toggles
       for (let i = markers.length - 1; i >= 0; i--) {
         const m = markers[i];
-        if (!m.isCentro && !m.isHospital && !m.isExternal) {
+        // centroSource="apv" = centro APV (preservar). Sin centroSource = reporte usuario (limpiar)
+        if ((!m.isCentro || !m.centroSource) && !m.isHospital && !m.isExternal) {
           try { map.removeLayer(m.layer); m.cg?.removeLayer(m.layer); } catch {}
           markers.splice(i, 1);
         }
@@ -1929,7 +1930,7 @@
         // 5) Dedup — ya existe un pin de la misma categoría a menos de 50m
         if (!warnedDup) {
           const nearDup = markers.find(m => {
-            if (m.isCentro || m.isHospital || m.category !== selectedCategory) return false;
+            if ((m.isCentro && m.centroSource) || m.isHospital || m.category !== selectedCategory) return false;
             const ll = m.layer?.getLatLng?.();
             if (!ll) return false;
             const dLat = (lat - ll.lat) * 111000;
