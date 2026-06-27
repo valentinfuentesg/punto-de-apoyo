@@ -2485,10 +2485,20 @@
         const chunk = rows.slice(i, i + 50);
         const { error } = await sb.from("reports").upsert(chunk, { onConflict: "external_source,external_id" });
         if (error) {
-          console.warn("CA→Supabase upsert:", error.message);
-          if (/column|schema|not found/i.test(error.message)) {
-            console.warn("Ejecuta el SQL de migración en Supabase: ADD COLUMN external_id, external_source, source, contact_phone");
+          if (/no unique or exclusion constraint/i.test(error.message)) {
+            // El índice único no existe aún — ejecutar en Supabase:
+            // CREATE UNIQUE INDEX reports_external_idx ON reports(external_source, external_id)
+            // WHERE external_source IS NOT NULL AND external_id IS NOT NULL;
+            console.warn("CA sync: falta CREATE UNIQUE INDEX en Supabase (ver descripción del PR #12)");
+            success = false;
+            break;
           }
+          if (/column|schema|not found/i.test(error.message)) {
+            console.warn("CA sync: falta ALTER TABLE ADD COLUMN (ver descripción del PR #12)");
+            success = false;
+            break;
+          }
+          console.warn("CA→Supabase upsert:", error.message);
           success = false;
           break;
         }
@@ -2496,7 +2506,7 @@
       }
       if (success) {
         markExternalSynced();
-        console.info(`CA upsert: ${rows.length} puntos sincronizados`);
+        console.info(`CA sync: ${rows.length} puntos sincronizados a Supabase`);
       }
     }
 
@@ -2536,6 +2546,54 @@
       const n = Number(newCount) || 0;
       if (cnt) cnt.innerHTML = `<strong>${n}</strong> ${n === 1 ? "confirmación" : "confirmaciones"}`;
       showStatus("Gracias por confirmar", "ok", 2000);
+    });
+
+    // Handler "márcala como atendida" para puntos externos (CA)
+    document.addEventListener("click", async (e) => {
+      const link = e.target.closest(".ca-fulfilled-link");
+      if (!link) return;
+      e.preventDefault();
+      const caId = link.dataset.caId;
+      if (!caId || !sb) return;
+
+      // Buscar ID interno
+      const { data: rec } = await sb.from("reports")
+        .select("id, fulfill_count")
+        .eq("external_source", "caracasayuda")
+        .eq("external_id", caId)
+        .single();
+
+      if (!rec) {
+        showStatus("Punto aún no sincronizado con nuestra base de datos. Intenta en unos minutos.", "err", 4000);
+        return;
+      }
+
+      if (isFulfilledVotedLocal(rec.id)) {
+        showStatus("Ya registraste tu voto en este punto.", "err", 2500);
+        return;
+      }
+
+      link.textContent = "registrando…";
+      const { data, error } = await sb.rpc("fulfill_report", {
+        p_report: rec.id, p_fp: CLIENT_FP,
+        p_note: "Atendida (reportado desde CaracasAyuda)",
+      });
+      if (error) {
+        showStatus("No se pudo marcar: " + error.message, "err", 3500);
+        link.textContent = "márcala aquí";
+        return;
+      }
+      markFulfilledVotedLocal(rec.id);
+      const count = Number(data?.count) || 0;
+      const fulfilled = !!data?.fulfilled;
+      const parent = link.closest("div");
+      if (fulfilled) {
+        if (parent) parent.innerHTML = '<span class="fulfilled-badge">✓ Marcada como atendida</span>';
+        showStatus("Solicitud marcada como atendida", "ok", 3000);
+      } else {
+        if (parent) parent.innerHTML = `<span style="font-size:11px;color:#9ca3af;">Voto registrado · falta ${(data?.threshold || 2) - count} más para retirarla</span>`;
+        showStatus(`Voto registrado · ${count}/${data?.threshold || 2} confirmaciones`, "ok", 3000);
+      }
     });
 
     // Disparar 2.5s después del init (después de centros y antes de Nominatim del resto)
