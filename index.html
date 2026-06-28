@@ -3300,6 +3300,7 @@
 
     function renderHospCounts(counts) {
       const list = $("hospList");
+      if (!list) return; // sección eliminada del HTML
       const entries = Object.entries(counts).sort((a,b) => b[1] - a[1]);
       if (!entries.length) {
         list.innerHTML = '<div class="hosp-loading">Sin datos por ahora.</div>';
@@ -3449,7 +3450,7 @@
         if (!hospMarkersRendered) { hospMarkersRendered = true; renderHospitalMarkers(counts); }
       } catch (err) {
         console.warn("Hosp fetch:", err.message);
-        if (!cached) $("hospList").innerHTML =
+        if (!cached && $("hospList")) $("hospList").innerHTML =
           '<div class="hosp-loading">No se pudo cargar el conteo. Abre la lista completa abajo.</div>';
       }
     }
