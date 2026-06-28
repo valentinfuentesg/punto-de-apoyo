@@ -977,6 +977,25 @@
         </section>
 
         <section>
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            API pública
+          </h3>
+          <p style="color:#94a3b8;font-size:12px;margin-bottom:8px;">Si tu comunidad o proyecto quiere consumir los datos activos del mapa, puedes usar esta API abierta y gratuita:</p>
+          <div style="background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;font-size:11px;font-family:monospace;color:#7dd3fc;word-break:break-all;margin-bottom:8px;">
+            GET https://hkvtqoivrciqpiwwjsmz.supabase.co/functions/v1/public-api
+          </div>
+          <p style="color:#94a3b8;font-size:12px;margin-bottom:6px;">Parámetros opcionales:</p>
+          <ul style="font-size:12px;">
+            <li><code style="color:#7dd3fc;">category</code> — agua · alimentos · medicinas · energia · senal · suministros · asistencia · peligro · movilidad</li>
+            <li><code style="color:#7dd3fc;">type</code> — <code>request</code> (necesita) o <code>offer</code> (ofrece)</li>
+            <li><code style="color:#7dd3fc;">bbox</code> — lat_min,lng_min,lat_max,lng_max</li>
+            <li><code style="color:#7dd3fc;">limit</code> — máximo de resultados (por defecto 500, máx 1000)</li>
+          </ul>
+          <p style="color:#6b7280;font-size:11px;margin-top:6px;">Licencia: CC BY 4.0 — Debes atribuir a <strong>puntodeapoyovenezuela.com</strong>. Los datos no incluyen información personal.</p>
+        </section>
+
+        <section>
           <p style="text-align:center;color:#6b7280;font-size:11px;">
             Datos: OpenStreetMap · Carto<br>
             Centros de acopio vía <a href="https://ayudaparavenezuela.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">ayudaparavenezuela.com</a> ·
