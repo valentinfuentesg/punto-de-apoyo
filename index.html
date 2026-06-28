@@ -650,6 +650,47 @@
     .buscar-panel-header h3 { margin: 0; font-size: 16px; color: #f1f5f9; font-weight: 700; }
     .buscar-panel-header button { background: none; border: none; color: #9ca3af; font-size: 20px; cursor: pointer; padding: 0; line-height: 1; }
     .buscar-panel p { color: #94a3b8; font-size: 13px; margin: 0 0 14px; }
+
+    /* Panel Buscar Paciente */
+    .paciente-input-wrap { position: relative; margin-bottom: 12px; }
+    .paciente-input {
+      width: 100%; padding: 10px 38px 10px 14px; box-sizing: border-box;
+      background: #1a1a1a; border: 1px solid var(--border); border-radius: 10px;
+      color: #f1f5f9; font-size: 14px; font-family: inherit; outline: none;
+    }
+    .paciente-input:focus { border-color: #555; }
+    .paciente-input-icon {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      color: #6b7280; pointer-events: none;
+    }
+    .paciente-results { max-height: 50vh; overflow-y: auto; }
+    .paciente-result {
+      padding: 10px 12px; border-radius: 10px;
+      background: #111; border: 1px solid var(--border);
+      margin-bottom: 6px;
+    }
+    .paciente-name { font-weight: 700; color: #f1f5f9; font-size: 13px; }
+    .paciente-hosp { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+    .paciente-detail { font-size: 11px; color: #6b7280; margin-top: 2px; }
+    .p-estado {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 1px 7px; border-radius: 999px; margin-left: 5px; vertical-align: middle;
+    }
+    .p-estado-ingresado { background: #14532d; color: #86efac; }
+    .p-estado-alta      { background: #064e3b; color: #6ee7b7; }
+    .p-estado-fallecido { background: #450a0a; color: #fca5a5; }
+    .p-estado-traslado  { background: #431407; color: #fdba74; }
+    .p-estado-otro      { background: #1f2937; color: #9ca3af; }
+    .paciente-empty { color: #6b7280; font-size: 13px; text-align: center; padding: 24px 0; }
+    #pacientePanel { z-index: 1300; }
+    #pacienteFilterTag {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 999px; background: #1a1a1a;
+      border: 1px solid var(--border); font-size: 11px; color: #94a3b8;
+      margin-bottom: 10px;
+    }
+    #pacienteFilterTag button { background: none; border: none; color: #6b7280; cursor: pointer; padding: 0 0 0 4px; font-size: 13px; line-height: 1; }
+
     .buscar-link-card {
       display: flex; align-items: center; gap: 12px;
       padding: 12px 14px; border-radius: 12px;
@@ -855,6 +896,11 @@
     </div>
   </div>
 
+  <button id="pacienteBtn" class="buscar-btn" style="bottom:172px;" aria-label="Buscar paciente en hospitales">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <span class="buscar-label">Buscar paciente</span>
+  </button>
+
   <button id="buscarBtn" class="buscar-btn" aria-label="Recursos y plataformas de ayuda">
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
     <span class="buscar-label">Recursos</span>
@@ -1007,6 +1053,32 @@
           <a href="tel:02129936911" style="color:#60a5fa;font-size:12px;text-decoration:none;">(0212) 993-69-11 · Rescarven</a>
           <a href="tel:02125454545" style="color:#60a5fa;font-size:12px;text-decoration:none;">(0212) 545-45-45 · Metropolitano</a>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Buscar Paciente -->
+  <div id="pacientePanel" class="buscar-panel-bg">
+    <div class="buscar-panel">
+      <div class="buscar-panel-header">
+        <h3>Buscar paciente</h3>
+        <button id="pacienteClose" aria-label="Cerrar">✕</button>
+      </div>
+      <p id="pacienteSubtitle" style="margin-bottom:8px;">Busca por nombre o cédula en los registros hospitalarios.</p>
+      <div id="pacienteFilterTag" style="display:none;">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        <span id="pacienteFilterName"></span>
+        <button id="pacienteFilterClear" aria-label="Quitar filtro">✕</button>
+      </div>
+      <div class="paciente-input-wrap">
+        <input id="pacienteInput" class="paciente-input" type="search" autocomplete="off" spellcheck="false" placeholder="Nombre, apellido o cédula…" />
+        <svg class="paciente-input-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </div>
+      <div id="pacienteResults" class="paciente-results">
+        <div class="paciente-empty">Escribe al menos 2 letras para buscar.</div>
+      </div>
+      <div style="margin-top:10px;font-size:10px;color:#4b5563;text-align:center;">
+        Datos vía <a href="https://docs.google.com/spreadsheets/d/1HuC8kWfurjlFH4W1nI34t67701QlRhiTyQAPTR6bKIc/edit" target="_blank" rel="noopener noreferrer" style="color:#6b7280;">hoja colaborativa</a> · Actualización cada 15 min
       </div>
     </div>
   </div>
@@ -1326,6 +1398,9 @@
     let warnedDup        = false;   // segundo click confirma si ya hay un pin similar cerca
     let reportWindowHours = 72;     // 72 = activos recientes | 168 = historial 7 días
     let loadReportsGen   = 0;       // token para cancelar llamadas solapadas
+    let allPatients      = [];      // registros de pacientes del sheet hospitalario
+    let patientsLoaded   = false;
+    let pacienteFilterHosp = null;  // hospital activo en el panel de búsqueda
 
     // marker -> { layer, category, report_type, created_at, cg? }
     const markers = [];
@@ -2317,11 +2392,108 @@
     else setTimeout(loadAPVCentros, 50);
 
     // ============================================================
-    // PANEL "BUSCAR PERSONA"
+    // PANEL "BUSCAR PERSONA" (Recursos)
     const buscarPanel = $("buscarPanel");
     $("buscarBtn").addEventListener("click", () => buscarPanel.classList.add("show"));
     $("buscarClose").addEventListener("click", () => buscarPanel.classList.remove("show"));
     buscarPanel.addEventListener("click", (e) => { if (e.target === buscarPanel) buscarPanel.classList.remove("show"); });
+
+    // PANEL "BUSCAR PACIENTE"
+    const pacientePanel = $("pacientePanel");
+    const pacienteInput = $("pacienteInput");
+
+    function estadoClass(e) {
+      if (/ingresado|admitido/i.test(e)) return "p-estado-ingresado";
+      if (/\balta\b/i.test(e))           return "p-estado-alta";
+      if (/fallecido|deceso|[oó]bito|muerte/i.test(e)) return "p-estado-fallecido";
+      if (/traslad/i.test(e))            return "p-estado-traslado";
+      return "p-estado-otro";
+    }
+
+    function renderPacienteResults(results) {
+      const el = $("pacienteResults");
+      if (!results) {
+        el.innerHTML = '<div class="paciente-empty">Escribe al menos 2 letras para buscar.</div>';
+        return;
+      }
+      if (!patientsLoaded) {
+        el.innerHTML = '<div class="paciente-empty">Cargando registros…</div>';
+        return;
+      }
+      if (!results.length) {
+        el.innerHTML = '<div class="paciente-empty">No se encontró ese nombre en los registros.</div>';
+        return;
+      }
+      el.innerHTML = results.map(p => {
+        const badge = p.estado && !/^sin informaci/i.test(p.estado)
+          ? `<span class="p-estado ${estadoClass(p.estado)}">${escapeHtml(p.estado)}</span>` : "";
+        const meta = [
+          p.cedula && !/^sin informaci/i.test(p.cedula) ? `CI: ${escapeHtml(p.cedula)}` : "",
+          p.edad   && !/^sin informaci/i.test(p.edad)   ? `${escapeHtml(p.edad)} años` : "",
+          p.sexo   && !/^sin informaci/i.test(p.sexo)   ? escapeHtml(p.sexo) : "",
+        ].filter(Boolean).join(" · ");
+        const diag = p.diag ? `<div class="paciente-detail">${escapeHtml(p.diag)}</div>` : "";
+        return `<div class="paciente-result">
+          <div><span class="paciente-name">${escapeHtml(p.name)}</span>${badge}</div>
+          <div class="paciente-hosp">${escapeHtml(p.hosp)}</div>
+          ${meta ? `<div class="paciente-detail">${meta}</div>` : ""}
+          ${diag}
+        </div>`;
+      }).join("");
+    }
+
+    function openPacientePanel(filterHosp) {
+      pacienteFilterHosp = filterHosp || null;
+      const filterTag  = $("pacienteFilterTag");
+      const filterName = $("pacienteFilterName");
+      const subtitle   = $("pacienteSubtitle");
+      if (pacienteFilterHosp) {
+        filterName.textContent = pacienteFilterHosp;
+        filterTag.style.display  = "inline-flex";
+        subtitle.style.display   = "none";
+      } else {
+        filterTag.style.display  = "none";
+        subtitle.style.display   = "";
+      }
+      pacientePanel.classList.add("show");
+      pacienteInput.value = "";
+      renderPacienteResults(null);
+      setTimeout(() => pacienteInput.focus(), 80);
+    }
+
+    $("pacienteBtn").addEventListener("click", () => openPacientePanel(null));
+    $("pacienteClose").addEventListener("click", () => pacientePanel.classList.remove("show"));
+    pacientePanel.addEventListener("click", (e) => { if (e.target === pacientePanel) pacientePanel.classList.remove("show"); });
+    $("pacienteFilterClear").addEventListener("click", () => {
+      pacienteFilterHosp = null;
+      $("pacienteFilterTag").style.display = "none";
+      $("pacienteSubtitle").style.display  = "";
+      renderPacienteResults(pacienteInput.value.trim().length >= 2
+        ? allPatients.filter(p => {
+            const q = pacienteInput.value.trim().toLowerCase();
+            return p.name.toLowerCase().includes(q) || p.cedula.toLowerCase().includes(q);
+          }).slice(0, 50)
+        : null);
+    });
+
+    pacienteInput.addEventListener("input", () => {
+      const q = pacienteInput.value.trim().toLowerCase();
+      if (q.length < 2) { renderPacienteResults(null); return; }
+      const results = allPatients.filter(p => {
+        if (pacienteFilterHosp && !p.hosp.toLowerCase().includes(pacienteFilterHosp.toLowerCase())) return false;
+        return p.name.toLowerCase().includes(q) || p.cedula.toLowerCase().includes(q);
+      }).slice(0, 50);
+      renderPacienteResults(results);
+    });
+
+    // Click delegation para botón "Buscar paciente en este hospital" en popups de hospital
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".open-paciente-btn");
+      if (btn) {
+        map.closePopup();
+        openPacientePanel(btn.dataset.hosp || null);
+      }
+    });
 
     // INFO MODAL (Sobre / Privacidad / Términos / Emergencias)
     // ============================================================
@@ -3052,21 +3224,29 @@
       const bloodBadge = opts.bloodDonors
         ? `<div style="margin:6px 0;padding:8px 10px;background:#7f1d1d;color:#fee2e2;
              border-left:4px solid #ef4444;border-radius:4px;font-weight:700;font-size:12px;">
-             🩸 BUSCAN DONANTES DE SANGRE — acércate si puedes donar
+             BUSCAN DONANTES DE SANGRE — acércate si puedes donar
            </div>`
         : "";
-      return `<span class="popup-badge" style="background:#7f1d1d;color:#fee2e2;">🏥 Hospital</span><br>` +
+      const countLabel = count > 0
+        ? `<div class="popup-acepta" style="margin-bottom:6px;"><strong>${count}</strong> ${count === 1 ? "paciente registrado" : "pacientes registrados"}</div>`
+        : "";
+      const searchBtn = `<button class="open-paciente-btn" data-hosp="${escapeHtml(name)}"
+        style="display:flex;align-items:center;gap:6px;width:100%;padding:8px 12px;
+        background:#1f1f1f;border:1px solid #333;border-radius:8px;
+        color:#e2e8f0;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
+        text-align:left;margin-bottom:6px;transition:background .15s;">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#9ca3af" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Buscar paciente en este hospital
+      </button>`;
+      return `<span class="popup-badge" style="background:#7f1d1d;color:#fee2e2;">Hospital</span><br>` +
              `<div class="popup-org" style="color:#fca5a5;">${escapeHtml(name)}</div>` +
              bloodBadge +
-             `<div class="popup-acepta"><strong>${count}</strong> ${count === 1 ? "paciente registrado" : "pacientes registrados"} en este hospital.</div>` +
-             `<div style="margin-top:6px;">` +
-             `<a href="${SHEET_HOSP.url}" target="_blank" rel="noopener noreferrer" ` +
-             `style="display:inline-block;background:#7f1d1d;color:#fee2e2;padding:8px 12px;` +
-             `border-radius:6px;font-weight:700;font-size:12px;text-decoration:none;">` +
-             `🔍 Buscar familiar (lista completa)</a></div>` +
+             countLabel +
+             searchBtn +
              `<div>${gmapsLink(0, 0).replace(/destination=0,0/, `destination=${encodeURIComponent(name + ', Venezuela')}`)}` +
              waShareButton(
-               `Hospital ${name}\n${count} ${count === 1 ? "paciente registrado" : "pacientes registrados"}` +
+               `Hospital ${name}` +
+               (count > 0 ? `\n${count} ${count === 1 ? "paciente registrado" : "pacientes registrados"}` : "") +
                `${opts.bloodDonors ? "\nBUSCAN DONANTES DE SANGRE — acércate si puedes donar" : ""}` +
                `\nUbicación: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ", Venezuela")}` +
                `\n\nMás info en ${SITE_URL}`
@@ -3204,12 +3384,47 @@
         }
         if (hospCol < 0) throw new Error("No se encontró la columna HOSPITAL");
 
+        // Detectar columnas por nombre en el header (Mode A: dataStart > 0)
+        const headerRow = dataStart > 0 ? rows[dataStart - 1] : null;
+        let nameCol = -1, cedulaCol = -1, estadoCol = -1,
+            edadCol = -1, sexoCol = -1, diagCol = -1, lesionCol = -1;
+        if (headerRow) {
+          nameCol    = headerRow.findIndex(h => /apellido|nombre/i.test(h));
+          cedulaCol  = headerRow.findIndex(h => /c[eé]dula/i.test(h));
+          estadoCol  = headerRow.findIndex(h => /^\s*estado\s*$/i.test(h));
+          edadCol    = headerRow.findIndex(h => /^\s*edad\s*$/i.test(h));
+          sexoCol    = headerRow.findIndex(h => /^\s*sexo\s*$/i.test(h));
+          diagCol    = headerRow.findIndex(h => /servicio|diagn[oó]stico/i.test(h));
+          lesionCol  = headerRow.findIndex(h => /naturaleza|lesi[oó]n/i.test(h));
+        }
+
         const counts = {};
+        const patients = [];
         for (let i = dataStart; i < rows.length; i++) {
-          const h = (rows[i][hospCol] || "").trim();
+          const row = rows[i];
+          const h = (row[hospCol] || "").trim();
           if (!h || h.length < 3 || h.length > 100) continue;
           counts[h] = (counts[h] || 0) + 1;
+          if (nameCol >= 0) {
+            const name = (row[nameCol] || "").trim();
+            if (name && !/^sin informaci[oó]n$/i.test(name) && name.length > 1) {
+              const diag = diagCol >= 0 ? (row[diagCol] || "").trim()
+                         : lesionCol >= 0 ? (row[lesionCol] || "").trim() : "";
+              patients.push({
+                name,
+                hosp: h,
+                cedula: cedulaCol >= 0 ? (row[cedulaCol] || "").trim() : "",
+                estado: estadoCol >= 0 ? (row[estadoCol] || "").trim() : "",
+                edad:   edadCol   >= 0 ? (row[edadCol]   || "").trim() : "",
+                sexo:   sexoCol   >= 0 ? (row[sexoCol]   || "").trim() : "",
+                diag:   /^sin informaci[oó]n$/i.test(diag) ? "" : diag,
+              });
+            }
+          }
         }
+        allPatients = patients;
+        patientsLoaded = true;
+
         try { localStorage.setItem(SHEET_HOSP.cacheKey, JSON.stringify({ t: Date.now(), data: counts })); } catch {}
         renderHospCounts(counts);
         if (!hospMarkersRendered) { hospMarkersRendered = true; renderHospitalMarkers(counts); }
