@@ -69,7 +69,7 @@
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
     img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org;
     font-src 'self' data:;
-    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com https://localizadosvenezuela.com https://ayudaparavenezuela.com https://caracasayuda.com;
+    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com https://ayudaparavenezuela.com https://caracasayuda.com https://www.reconectavenezuela.com;
     manifest-src 'self';
     upgrade-insecure-requests;
   " />
@@ -989,10 +989,7 @@
 
         <section>
           <p style="text-align:center;color:#6b7280;font-size:11px;">
-            Datos: OpenStreetMap · Carto<br>
-            Centros de acopio vía <a href="https://ayudaparavenezuela.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">ayudaparavenezuela.com</a> ·
-            Reportes vía <a href="https://caracasayuda.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">caracasayuda.com</a> ·
-            Hospitales vía <a href="https://localizadosvenezuela.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">localizadosvenezuela.com</a>
+            Datos: OpenStreetMap · Carto
           </p>
         </section>
       </div>
@@ -1087,7 +1084,7 @@
         <h3>Buscar persona</h3>
         <button id="pacienteClose" aria-label="Cerrar">✕</button>
       </div>
-      <p id="pacienteSubtitle" style="margin-bottom:8px;font-size:12px;color:#6b7280;">Busca por nombre o cédula en registros hospitalarios y en localizadosvenezuela.com.</p>
+      <p id="pacienteSubtitle" style="margin-bottom:8px;font-size:12px;color:#6b7280;">Busca por nombre o cédula en los registros hospitalarios.</p>
       <div id="pacienteFilterTag" style="display:none;">
         <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
         <span id="pacienteFilterName"></span>
@@ -1101,7 +1098,7 @@
         <div class="paciente-empty">Escribe al menos 2 letras para buscar.</div>
       </div>
       <div style="margin-top:10px;font-size:10px;color:#4b5563;text-align:center;">
-        Datos vía <a href="https://docs.google.com/spreadsheets/d/1HuC8kWfurjlFH4W1nI34t67701QlRhiTyQAPTR6bKIc/edit" target="_blank" rel="noopener noreferrer" style="color:#6b7280;">hoja colaborativa</a> y <a href="https://localizadosvenezuela.com" target="_blank" rel="noopener noreferrer" style="color:#6b7280;">localizadosvenezuela.com</a>
+        Datos vía <a href="https://docs.google.com/spreadsheets/d/1HuC8kWfurjlFH4W1nI34t67701QlRhiTyQAPTR6bKIc/edit" target="_blank" rel="noopener noreferrer" style="color:#6b7280;">hoja colaborativa</a> · Actualización cada 15 min
       </div>
     </div>
   </div>
@@ -1430,8 +1427,6 @@
     let loadReportsGen   = 0;       // token para cancelar llamadas solapadas
     let allPatients      = [];      // registros de pacientes del sheet hospitalario
     let patientsLoaded   = false;
-    let allLocalizados   = [];      // personas de localizadosvenezuela.com
-    let localizadosPersonasLoaded = false;
     let pacienteFilterHosp = null;  // hospital activo en el panel de búsqueda
 
     // marker -> { layer, category, report_type, created_at, cg? }
@@ -2317,6 +2312,61 @@
     }
 
     // ============================================================
+    // RECONECTA VENEZUELA — puntos de señal / WiFi
+    // reconectavenezuela.com no expone CORS desde fuera del browser;
+    // intentamos varios endpoints candidatos y usamos el primero que responda.
+    // ============================================================
+    let reconectaLoaded = false;
+    async function loadReconectaSignal() {
+      if (reconectaLoaded) return;
+      reconectaLoaded = true;
+      const CANDIDATES = [
+        "https://www.reconectavenezuela.com/api/puntos",
+        "https://www.reconectavenezuela.com/api/v1/puntos",
+        "https://www.reconectavenezuela.com/api/points",
+        "https://www.reconectavenezuela.com/puntos.json",
+        "https://www.reconectavenezuela.com/data.json",
+      ];
+      let puntos = null;
+      for (const url of CANDIDATES) {
+        try {
+          const res = await fetch(url, { mode: "cors" });
+          if (!res.ok) continue;
+          const json = await res.json();
+          const arr = Array.isArray(json?.data) ? json.data
+                    : Array.isArray(json?.puntos) ? json.puntos
+                    : Array.isArray(json) ? json : null;
+          if (arr?.length) { puntos = arr; console.info("[reconecta] endpoint:", url, "→", arr.length, "puntos"); break; }
+        } catch { continue; }
+      }
+      if (!puntos) { console.info("[reconecta] sin CORS en ningún endpoint candidato"); return; }
+
+      const cg = getOrCreateCluster("senal");
+      let added = 0;
+      for (const p of puntos) {
+        const lat = Number(p.lat ?? p.latitude  ?? p.latitud  ?? p.y);
+        const lng = Number(p.lng ?? p.longitude ?? p.longitud ?? p.lon ?? p.x);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        const nombre   = escapeHtml(p.nombre   || p.name     || p.titulo || "Punto WiFi");
+        const direccion = escapeHtml(p.direccion || p.address || p.addr   || "");
+        const ciudad   = escapeHtml(p.ciudad   || p.city     || "");
+        const waText   = `Punto WiFi/Señal: ${p.nombre || "Reconecta Venezuela"}\n${direccion}\nUbicación: ${gmapsUrl(lat, lng)}\n\nMás info: ${SITE_URL}`;
+        const layer = L.marker([lat, lng], { icon: makeIcon("senal", "offer") });
+        layer.bindPopup(
+          `<span class="popup-badge" style="background:#1e3a5f;color:#93c5fd;display:inline-flex;align-items:center;gap:4px;">${SVG_ICONS.senal.replace('width="20" height="20"','width="13" height="13"')} Señal / WiFi</span><br>` +
+          `<div class="popup-org" style="color:#93c5fd;">${nombre}</div>` +
+          (direccion ? `<div class="popup-addr">${direccion}${ciudad ? ` · ${ciudad}` : ""}</div>` : "") +
+          `<div>${gmapsLink(lat, lng)}${waShareButton(waText)}</div>`
+        );
+        const entry = { layer, isExternal: true, category: "senal", report_type: "offer", created_at: null, cg };
+        markers.push(entry);
+        if (matchesFilter(entry, activeFilter)) { cg.addLayer(layer); added++; }
+      }
+      if (added) showStatus(`${added} puntos WiFi de Reconecta Venezuela`, "ok", 2500);
+      updateHeroStats();
+    }
+
+    // ============================================================
     // CSV parser mínimo (maneja comillas y comas dentro de campos)
     // ============================================================
     function parseCSV(text) {
@@ -2488,6 +2538,8 @@
     else setTimeout(loadAPVCentros, 50);
     if (window.requestIdleCallback) requestIdleCallback(loadRGAlbergues, { timeout: 600 });
     else setTimeout(loadRGAlbergues, 120);
+    if (window.requestIdleCallback) requestIdleCallback(loadReconectaSignal, { timeout: 800 });
+    else setTimeout(loadReconectaSignal, 200);
 
     // ============================================================
     // PANEL "BUSCAR PERSONA" (Recursos)
@@ -2523,8 +2575,6 @@
         return;
       }
       el.innerHTML = results.map(p => {
-        const sourceBadge = p.source === "localizados"
-          ? `<span class="p-estado" style="background:#134e4a;color:#99f6e4;margin-left:4px;">Localizado</span>` : "";
         const badge = p.estado && !/^sin informaci/i.test(p.estado)
           ? `<span class="p-estado ${estadoClass(p.estado)}">${escapeHtml(p.estado)}</span>` : "";
         const meta = [
@@ -2534,7 +2584,7 @@
         ].filter(Boolean).join(" · ");
         const diag = p.diag ? `<div class="paciente-detail">${escapeHtml(p.diag)}</div>` : "";
         return `<div class="paciente-result">
-          <div><span class="paciente-name">${escapeHtml(p.name)}</span>${badge}${sourceBadge}</div>
+          <div><span class="paciente-name">${escapeHtml(p.name)}</span>${badge}</div>
           <div class="paciente-hosp">${escapeHtml(p.hosp)}</div>
           ${meta ? `<div class="paciente-detail">${meta}</div>` : ""}
           ${diag}
@@ -2558,64 +2608,34 @@
       pacientePanel.classList.add("show");
       pacienteInput.value = "";
       renderPacienteResults(null);
-      loadLocalizadosPersonas();
       setTimeout(() => pacienteInput.focus(), 80);
-    }
-
-    async function loadLocalizadosPersonas() {
-      if (localizadosPersonasLoaded) return;
-      localizadosPersonasLoaded = true;
-      try {
-        const res = await fetch("https://localizadosvenezuela.com/api/v1/personas", { mode: "cors" });
-        if (!res.ok) { console.info("[localizados] personas: HTTP", res.status); return; }
-        const json = await res.json();
-        const arr = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
-        if (!arr.length) { console.info("[localizados] personas: sin registros"); return; }
-        // Log de campos para verificar estructura real si cambia la API
-        console.info("[localizados] campos disponibles →", Object.keys(arr[0]));
-        allLocalizados = arr.map(p => ({
-          name:   (p.nombre   || p.name     || "").trim(),
-          cedula: (p.cedula   || p.ci       || p.documento || "").trim(),
-          hosp:   (p.lugar    || p.hospital || p.lugar_actual || p.ubicacion || "").trim(),
-          estado: (p.estado   || p.status   || p.condicion  || "").trim(),
-          source: "localizados",
-        })).filter(p => p.name.length > 1);
-        // Si el panel está abierto con query activa, refrescar resultados
-        const _q = pacienteInput?.value?.trim().toLowerCase() || "";
-        if (_q.length >= 2 && pacientePanel.classList.contains("show")) {
-          pacienteInput.dispatchEvent(new Event("input"));
-        }
-      } catch (e) {
-        console.info("[localizados] personas error:", e.message);
-      }
     }
 
     $("pacienteBtn").addEventListener("click", () => openPacientePanel(null));
     $("pacienteClose").addEventListener("click", () => pacientePanel.classList.remove("show"));
     pacientePanel.addEventListener("click", (e) => { if (e.target === pacientePanel) pacientePanel.classList.remove("show"); });
-    function searchPersonas(q, hospFilter) {
-      const sheetHits = allPatients.filter(p => {
-        if (hospFilter && !p.hosp.toLowerCase().includes(hospFilter.toLowerCase())) return false;
-        return p.name.toLowerCase().includes(q) || p.cedula.toLowerCase().includes(q);
-      }).slice(0, 40);
-      const localizadosHits = allLocalizados.filter(p =>
-        p.name.toLowerCase().includes(q) || p.cedula.toLowerCase().includes(q)
-      ).slice(0, 20);
-      return [...sheetHits, ...localizadosHits];
-    }
 
     $("pacienteFilterClear").addEventListener("click", () => {
       pacienteFilterHosp = null;
       $("pacienteFilterTag").style.display = "none";
       $("pacienteSubtitle").style.display  = "";
       const q = pacienteInput.value.trim().toLowerCase();
-      renderPacienteResults(q.length >= 2 ? searchPersonas(q, null) : null);
+      if (q.length >= 2) {
+        renderPacienteResults(allPatients.filter(p => {
+          return p.name.toLowerCase().includes(q) || p.cedula.toLowerCase().includes(q);
+        }).slice(0, 50));
+      } else {
+        renderPacienteResults(null);
+      }
     });
 
     pacienteInput.addEventListener("input", () => {
       const q = pacienteInput.value.trim().toLowerCase();
       if (q.length < 2) { renderPacienteResults(null); return; }
-      renderPacienteResults(searchPersonas(q, pacienteFilterHosp));
+      renderPacienteResults(allPatients.filter(p => {
+        if (pacienteFilterHosp && !p.hosp.toLowerCase().includes(pacienteFilterHosp.toLowerCase())) return false;
+        return p.name.toLowerCase().includes(q) || p.cedula.toLowerCase().includes(q);
+      }).slice(0, 50));
     });
 
     // Click delegation para botón "Buscar paciente en este hospital" en popups de hospital
