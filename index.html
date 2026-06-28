@@ -1087,17 +1087,7 @@
         <h3>Buscar persona</h3>
         <button id="pacienteClose" aria-label="Cerrar">✕</button>
       </div>
-      <a class="buscar-link-card" href="https://localizadosvenezuela.com" target="_blank" rel="noopener noreferrer" style="margin-bottom:10px;">
-        <div class="blc-icon" style="background:#134e4a;">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="#5eead4"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg>
-        </div>
-        <div class="blc-text">
-          <span class="blc-title">localizadosvenezuela.com</span>
-          <span class="blc-sub">Personas localizadas y reportadas como encontradas</span>
-        </div>
-        <span class="blc-arrow">›</span>
-      </a>
-      <p id="pacienteSubtitle" style="margin-bottom:8px;font-size:12px;color:#6b7280;">Busca por nombre o cédula en registros hospitalarios.</p>
+      <p id="pacienteSubtitle" style="margin-bottom:8px;font-size:12px;color:#6b7280;">Busca por nombre o cédula en registros hospitalarios y en localizadosvenezuela.com.</p>
       <div id="pacienteFilterTag" style="display:none;">
         <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
         <span id="pacienteFilterName"></span>
@@ -1111,7 +1101,7 @@
         <div class="paciente-empty">Escribe al menos 2 letras para buscar.</div>
       </div>
       <div style="margin-top:10px;font-size:10px;color:#4b5563;text-align:center;">
-        Datos vía <a href="https://docs.google.com/spreadsheets/d/1HuC8kWfurjlFH4W1nI34t67701QlRhiTyQAPTR6bKIc/edit" target="_blank" rel="noopener noreferrer" style="color:#6b7280;">hoja colaborativa</a> · Actualización cada 15 min
+        Datos vía <a href="https://docs.google.com/spreadsheets/d/1HuC8kWfurjlFH4W1nI34t67701QlRhiTyQAPTR6bKIc/edit" target="_blank" rel="noopener noreferrer" style="color:#6b7280;">hoja colaborativa</a> y <a href="https://localizadosvenezuela.com" target="_blank" rel="noopener noreferrer" style="color:#6b7280;">localizadosvenezuela.com</a>
       </div>
     </div>
   </div>
@@ -1440,6 +1430,8 @@
     let loadReportsGen   = 0;       // token para cancelar llamadas solapadas
     let allPatients      = [];      // registros de pacientes del sheet hospitalario
     let patientsLoaded   = false;
+    let allLocalizados   = [];      // personas de localizadosvenezuela.com
+    let localizadosPersonasLoaded = false;
     let pacienteFilterHosp = null;  // hospital activo en el panel de búsqueda
 
     // marker -> { layer, category, report_type, created_at, cg? }
@@ -2531,6 +2523,8 @@
         return;
       }
       el.innerHTML = results.map(p => {
+        const sourceBadge = p.source === "localizados"
+          ? `<span class="p-estado" style="background:#134e4a;color:#99f6e4;margin-left:4px;">Localizado</span>` : "";
         const badge = p.estado && !/^sin informaci/i.test(p.estado)
           ? `<span class="p-estado ${estadoClass(p.estado)}">${escapeHtml(p.estado)}</span>` : "";
         const meta = [
@@ -2540,7 +2534,7 @@
         ].filter(Boolean).join(" · ");
         const diag = p.diag ? `<div class="paciente-detail">${escapeHtml(p.diag)}</div>` : "";
         return `<div class="paciente-result">
-          <div><span class="paciente-name">${escapeHtml(p.name)}</span>${badge}</div>
+          <div><span class="paciente-name">${escapeHtml(p.name)}</span>${badge}${sourceBadge}</div>
           <div class="paciente-hosp">${escapeHtml(p.hosp)}</div>
           ${meta ? `<div class="paciente-detail">${meta}</div>` : ""}
           ${diag}
@@ -2564,32 +2558,64 @@
       pacientePanel.classList.add("show");
       pacienteInput.value = "";
       renderPacienteResults(null);
+      loadLocalizadosPersonas();
       setTimeout(() => pacienteInput.focus(), 80);
+    }
+
+    async function loadLocalizadosPersonas() {
+      if (localizadosPersonasLoaded) return;
+      localizadosPersonasLoaded = true;
+      try {
+        const res = await fetch("https://localizadosvenezuela.com/api/v1/personas", { mode: "cors" });
+        if (!res.ok) { console.info("[localizados] personas: HTTP", res.status); return; }
+        const json = await res.json();
+        const arr = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+        if (!arr.length) { console.info("[localizados] personas: sin registros"); return; }
+        // Log de campos para verificar estructura real si cambia la API
+        console.info("[localizados] campos disponibles →", Object.keys(arr[0]));
+        allLocalizados = arr.map(p => ({
+          name:   (p.nombre   || p.name     || "").trim(),
+          cedula: (p.cedula   || p.ci       || p.documento || "").trim(),
+          hosp:   (p.lugar    || p.hospital || p.lugar_actual || p.ubicacion || "").trim(),
+          estado: (p.estado   || p.status   || p.condicion  || "").trim(),
+          source: "localizados",
+        })).filter(p => p.name.length > 1);
+        // Si el panel está abierto con query activa, refrescar resultados
+        const _q = pacienteInput?.value?.trim().toLowerCase() || "";
+        if (_q.length >= 2 && pacientePanel.classList.contains("show")) {
+          pacienteInput.dispatchEvent(new Event("input"));
+        }
+      } catch (e) {
+        console.info("[localizados] personas error:", e.message);
+      }
     }
 
     $("pacienteBtn").addEventListener("click", () => openPacientePanel(null));
     $("pacienteClose").addEventListener("click", () => pacientePanel.classList.remove("show"));
     pacientePanel.addEventListener("click", (e) => { if (e.target === pacientePanel) pacientePanel.classList.remove("show"); });
+    function searchPersonas(q, hospFilter) {
+      const sheetHits = allPatients.filter(p => {
+        if (hospFilter && !p.hosp.toLowerCase().includes(hospFilter.toLowerCase())) return false;
+        return p.name.toLowerCase().includes(q) || p.cedula.toLowerCase().includes(q);
+      }).slice(0, 40);
+      const localizadosHits = allLocalizados.filter(p =>
+        p.name.toLowerCase().includes(q) || p.cedula.toLowerCase().includes(q)
+      ).slice(0, 20);
+      return [...sheetHits, ...localizadosHits];
+    }
+
     $("pacienteFilterClear").addEventListener("click", () => {
       pacienteFilterHosp = null;
       $("pacienteFilterTag").style.display = "none";
       $("pacienteSubtitle").style.display  = "";
-      renderPacienteResults(pacienteInput.value.trim().length >= 2
-        ? allPatients.filter(p => {
-            const q = pacienteInput.value.trim().toLowerCase();
-            return p.name.toLowerCase().includes(q) || p.cedula.toLowerCase().includes(q);
-          }).slice(0, 50)
-        : null);
+      const q = pacienteInput.value.trim().toLowerCase();
+      renderPacienteResults(q.length >= 2 ? searchPersonas(q, null) : null);
     });
 
     pacienteInput.addEventListener("input", () => {
       const q = pacienteInput.value.trim().toLowerCase();
       if (q.length < 2) { renderPacienteResults(null); return; }
-      const results = allPatients.filter(p => {
-        if (pacienteFilterHosp && !p.hosp.toLowerCase().includes(pacienteFilterHosp.toLowerCase())) return false;
-        return p.name.toLowerCase().includes(q) || p.cedula.toLowerCase().includes(q);
-      }).slice(0, 50);
-      renderPacienteResults(results);
+      renderPacienteResults(searchPersonas(q, pacienteFilterHosp));
     });
 
     // Click delegation para botón "Buscar paciente en este hospital" en popups de hospital
