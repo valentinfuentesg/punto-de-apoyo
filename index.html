@@ -3227,9 +3227,6 @@
              BUSCAN DONANTES DE SANGRE — acércate si puedes donar
            </div>`
         : "";
-      const countLabel = count > 0
-        ? `<div class="popup-acepta" style="margin-bottom:6px;"><strong>${count}</strong> ${count === 1 ? "paciente registrado" : "pacientes registrados"}</div>`
-        : "";
       const searchBtn = `<button class="open-paciente-btn" data-hosp="${escapeHtml(name)}"
         style="display:flex;align-items:center;gap:6px;width:100%;padding:8px 12px;
         background:#1f1f1f;border:1px solid #333;border-radius:8px;
@@ -3241,12 +3238,10 @@
       return `<span class="popup-badge" style="background:#7f1d1d;color:#fee2e2;">Hospital</span><br>` +
              `<div class="popup-org" style="color:#fca5a5;">${escapeHtml(name)}</div>` +
              bloodBadge +
-             countLabel +
              searchBtn +
              `<div>${gmapsLink(0, 0).replace(/destination=0,0/, `destination=${encodeURIComponent(name + ', Venezuela')}`)}` +
              waShareButton(
                `Hospital ${name}` +
-               (count > 0 ? `\n${count} ${count === 1 ? "paciente registrado" : "pacientes registrados"}` : "") +
                `${opts.bloodDonors ? "\nBUSCAN DONANTES DE SANGRE — acércate si puedes donar" : ""}` +
                `\nUbicación: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ", Venezuela")}` +
                `\n\nMás info en ${SITE_URL}`
