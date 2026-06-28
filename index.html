@@ -3403,7 +3403,7 @@
           throw new Error("No se encontró la columna HOSPITAL");
         }
 
-        // Detectar columnas por nombre en el header (Mode A: dataStart > 0)
+        // Detectar columnas por nombre en el header (si hay fila anterior a los datos)
         const headerRow = dataStart > 0 ? rows[dataStart - 1] : null;
         let nameCol = -1, cedulaCol = -1, estadoCol = -1,
             edadCol = -1, sexoCol = -1, diagCol = -1, lesionCol = -1;
@@ -3415,28 +3415,39 @@
           sexoCol    = headerRow.findIndex(h => /^\s*sexo\s*$/i.test(h));
           diagCol    = headerRow.findIndex(h => /servicio|diagn[oó]stico/i.test(h));
           lesionCol  = headerRow.findIndex(h => /naturaleza|lesi[oó]n/i.test(h));
+
+          // Validar nameCol: si los primeros datos son puro número (ID de fila),
+          // avanzar al siguiente candidato con letras
+          if (nameCol >= 0 && dataStart < rows.length) {
+            const sample = rows.slice(dataStart, Math.min(dataStart + 5, rows.length));
+            const looksNumeric = sample.filter(r => (r[nameCol] || "").trim()).every(r => /^\d+$/.test((r[nameCol] || "").trim()));
+            if (looksNumeric) nameCol++; // la columna real de nombres está una posición a la derecha
+          }
         }
 
         const counts = {};
         const patients = [];
+        const genericRe = /^sin informaci[oó]n$|^sin\s+inf\b|^\s*-\s*$/i;
         for (let i = dataStart; i < rows.length; i++) {
           const row = rows[i];
-          const h = (row[hospCol] || "").trim();
+          // Limpiar prefijo "HOSPITAL:" que aparece cuando el header fue reemplazado
+          const h = (row[hospCol] || "").trim().replace(/^hospital:\s*/i, "");
           if (!h || h.length < 3 || h.length > 100) continue;
           counts[h] = (counts[h] || 0) + 1;
           if (nameCol >= 0) {
             const name = (row[nameCol] || "").trim();
-            if (name && !/^sin informaci[oó]n$/i.test(name) && name.length > 1) {
+            if (name && !genericRe.test(name) && !/^\d+$/.test(name) && name.length > 1) {
               const diag = diagCol >= 0 ? (row[diagCol] || "").trim()
                          : lesionCol >= 0 ? (row[lesionCol] || "").trim() : "";
+              const cedula = cedulaCol >= 0 ? (row[cedulaCol] || "").trim() : "";
               patients.push({
                 name,
                 hosp: h,
-                cedula: cedulaCol >= 0 ? (row[cedulaCol] || "").trim() : "",
+                cedula: genericRe.test(cedula) ? "" : cedula,
                 estado: estadoCol >= 0 ? (row[estadoCol] || "").trim() : "",
                 edad:   edadCol   >= 0 ? (row[edadCol]   || "").trim() : "",
                 sexo:   sexoCol   >= 0 ? (row[sexoCol]   || "").trim() : "",
-                diag:   /^sin informaci[oó]n$/i.test(diag) ? "" : diag,
+                diag:   genericRe.test(diag) ? "" : diag,
               });
             }
           }
