@@ -3424,6 +3424,12 @@
         }
         allPatients = patients;
         patientsLoaded = true;
+        // Si el panel está abierto con una query activa, re-renderizar ahora que tenemos datos
+        const _pInput = document.getElementById("pacienteInput");
+        const _pPanel = document.getElementById("pacientePanel");
+        if (_pInput && _pPanel && _pPanel.classList.contains("show")) {
+          _pInput.dispatchEvent(new Event("input"));
+        }
 
         try { localStorage.setItem(SHEET_HOSP.cacheKey, JSON.stringify({ t: Date.now(), data: counts })); } catch {}
         renderHospCounts(counts);
