@@ -937,6 +937,34 @@
 
         <section>
           <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            ¿Cómo usar el mapa?
+          </h3>
+          <ul>
+            <li><strong>Toca cualquier punto del mapa</strong> para reportar un recurso o necesidad en esa ubicación.</li>
+            <li>Elige la categoría (agua, alimentos, medicinas…) y si <em>ofreces</em> o <em>necesitas</em>.</li>
+            <li>Agrega una nota opcional con detalles y tu teléfono de contacto.</li>
+            <li>Usa los <strong>filtros</strong> arriba para ver solo una categoría, o <strong>"Cerca de mí"</strong> para pines en 5 km a la redonda.</li>
+            <li>En hospitales puedes buscar pacientes registrados por nombre o cédula.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+            Tipos de pines
+          </h3>
+          <ul>
+            <li><span style="color:#34d399;font-weight:600;">Verde</span> — Ofrece / Tiene disponible</li>
+            <li><span style="color:#f87171;font-weight:600;">Rojo</span> — Necesita / Solicita</li>
+            <li><span style="color:#60a5fa;font-weight:600;">Azul</span> — Centro de acopio oficial</li>
+            <li><span style="color:#fca5a5;font-weight:600;">Rojo oscuro</span> — Hospital o clínica</li>
+          </ul>
+          <p style="margin-top:6px;color:#94a3b8;font-size:12px;">Los pines semi-transparentes son reportes expirados (visibles en el historial de 7 días).</p>
+        </section>
+
+        <section>
+          <h3>
             <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             Privacidad
           </h3>
@@ -1477,21 +1505,24 @@
       return { txt: "Ofrece / Tiene", cls: "offer" };
     }
 
-    function gmapsLink(lat, lng, label = "🧭 Cómo llegar") {
+    function gmapsLink(lat, lng) {
       const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
       return `<a href="${url}" target="_blank" rel="noopener noreferrer"
-        style="display:inline-block;background:#1d4ed8;color:#fff;padding:6px 12px;
-               border-radius:6px;margin-top:6px;font-weight:600;
-               text-decoration:none;font-size:12px;">${label}</a>`;
+        style="display:inline-flex;align-items:center;gap:5px;background:#1d4ed8;color:#fff;
+               padding:6px 12px;border-radius:6px;margin-top:6px;font-weight:600;
+               text-decoration:none;font-size:12px;">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s-7-7.5-7-13a7 7 0 1 1 14 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        Cómo llegar</a>`;
     }
 
-    // Botón de compartir por WhatsApp con texto pre-armado
     function waShareButton(text) {
       const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
       return `<a href="${url}" target="_blank" rel="noopener noreferrer"
-        style="display:inline-block;background:#25d366;color:#fff;padding:6px 12px;
-               border-radius:6px;margin-top:6px;margin-left:6px;font-weight:600;
-               text-decoration:none;font-size:12px;">💬 WhatsApp</a>`;
+        style="display:inline-flex;align-items:center;gap:5px;background:#25d366;color:#fff;
+               padding:6px 12px;border-radius:6px;margin-top:6px;margin-left:6px;font-weight:600;
+               text-decoration:none;font-size:12px;">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zm-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884z"/></svg>
+        Enviar por WA</a>`;
     }
 
     function gmapsUrl(lat, lng) {
@@ -2775,7 +2806,7 @@
       // 2) fetch
       try {
         const url = `${CARACAS_AYUDA.url}/rest/v1/puntos`
-                  + `?select=id,nombre,categoria,tipo,estado,lat,lng,direccion,horario,telefono,descripcion,necesitan,ofrecen`
+                  + `?select=id,nombre,categoria,tipo,estado,lat,lng,direccion,horario,telefono,descripcion,necesitan,ofrecen,created_at`
                   + `&estado=eq.verified&limit=500`;
         const res = await fetch(url, {
           headers: {
@@ -2875,9 +2906,17 @@
         if (dup) { skipped++; continue; }
 
         const type = caResolveType(p.tipo, mapped);
+
+        // Expiración: requests 24h, offers 72h (igual que reportes propios)
+        if (p.created_at) {
+          const ageMs = Date.now() - new Date(p.created_at).getTime();
+          const limitMs = (type === "request" ? 24 : 72) * 3600 * 1000;
+          if (ageMs > limitMs) { skipped++; continue; }
+        }
+
         const layer = buildCAExternalReport(p, mapped);
         const cg = getOrCreateCluster(mapped);
-        const entry = { layer, category: mapped, report_type: type, created_at: null,
+        const entry = { layer, category: mapped, report_type: type, created_at: p.created_at || null,
                         source: "ca", isExternal: true, cg };
         markers.push(entry);
         if (matchesFilter(entry, activeFilter)) cg.addLayer(layer);
@@ -3125,7 +3164,7 @@
       { match: /perif[eé]rico.*catia|catia.*perif[eé]rico|baquero gonz[aá]lez|h[oó]pital.*baquero/i, name: "Hospital Periférico de Catia (Dr. Ricardo Baquero González)", lat: 10.5197, lng: -66.9460 },
       { match: /jos[eé] gregorio hern[aá]ndez|^jgh\b/i,             name: "Hospital Dr. José Gregorio Hernández (Catia)", lat: 10.5135, lng: -66.9445 },
       { match: /general del oeste/i,                                name: "Hospital General del Oeste (Los Magallanes)", lat: 10.5128, lng: -66.9408 },
-      { match: /cruz roja/i,                                        name: "Cruz Roja Venezolana (Maripérez, Caracas)", lat: 10.5060, lng: -66.9055 },
+      { match: /cruz roja/i,                                        name: "Cruz Roja Venezolana (La Candelaria, Caracas)", lat: 10.5043, lng: -66.8994 },
       { match: /pariata|rafael medina jim[eé]nez/i,                 name: "Hospital de Pariata (La Guaira)",         lat: 10.6033, lng: -66.9469 },
       { match: /cl[ií]nica el [aá]vila/i,                           name: "Clínica El Ávila (Altamira, Caracas)",    lat: 10.4945, lng: -66.8505 },
       { match: /maternidad concepci[oó]n palacios/i,                name: "Maternidad Concepción Palacios",          lat: 10.4953, lng: -66.9316 },
