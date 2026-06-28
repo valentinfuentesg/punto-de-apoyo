@@ -184,6 +184,7 @@
     @media (max-width: 600px) {
       .stats-bar { bottom: 80px; gap: 4px; }
       .stats-bar span { padding: 4px 9px; font-size: 10px; gap: 4px; }
+      .stats-bar .stat-2nd { display: none; }
     }
 
     /* Chip toggleable verde (para "Cerca de mí") */
@@ -371,7 +372,8 @@
     .pin-badge.request { border-color: #f97316; }     /* naranja = solicito */
     .pin-badge.alert   { border-color: #eab308; background: #fef3c7; } /* amarillo = peligro */
     .pin-badge.centro   { border-color: #0ea5e9; background: #e0f2fe; } /* azul = centro de acopio */
-    .pin-badge.hospital { border-color: #dc2626; background: #fee2e2; } /* rojo = hospital */
+    .pin-badge.hospital  { border-color: #dc2626; background: #fee2e2; } /* rojo = hospital */
+    .pin-badge.albergue  { border-color: #0d9488; background: #ccfbf1; } /* teal = albergue */
     .pin-pending { animation: bounce 0.6s infinite alternate; }
     @keyframes bounce { to { transform: translateY(-4px); } }
 
@@ -900,9 +902,9 @@
     </div>
   </div>
 
-  <button id="pacienteBtn" class="buscar-btn" style="bottom:172px;" aria-label="Buscar paciente en hospitales">
+  <button id="pacienteBtn" class="buscar-btn" style="bottom:172px;" aria-label="Buscar persona">
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <span class="buscar-label">Buscar paciente</span>
+    <span class="buscar-label">Buscar persona</span>
   </button>
 
   <button id="buscarBtn" class="buscar-btn" aria-label="Recursos y plataformas de ayuda">
@@ -1082,10 +1084,20 @@
   <div id="pacientePanel" class="buscar-panel-bg">
     <div class="buscar-panel">
       <div class="buscar-panel-header">
-        <h3>Buscar paciente</h3>
+        <h3>Buscar persona</h3>
         <button id="pacienteClose" aria-label="Cerrar">✕</button>
       </div>
-      <p id="pacienteSubtitle" style="margin-bottom:8px;">Busca por nombre o cédula en los registros hospitalarios.</p>
+      <a class="buscar-link-card" href="https://localizadosvenezuela.com" target="_blank" rel="noopener noreferrer" style="margin-bottom:10px;">
+        <div class="blc-icon" style="background:#134e4a;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="#5eead4"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg>
+        </div>
+        <div class="blc-text">
+          <span class="blc-title">localizadosvenezuela.com</span>
+          <span class="blc-sub">Personas localizadas y reportadas como encontradas</span>
+        </div>
+        <span class="blc-arrow">›</span>
+      </a>
+      <p id="pacienteSubtitle" style="margin-bottom:8px;font-size:12px;color:#6b7280;">Busca por nombre o cédula en registros hospitalarios.</p>
       <div id="pacienteFilterTag" style="display:none;">
         <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
         <span id="pacienteFilterName"></span>
@@ -1177,6 +1189,10 @@
           <button class="cat-btn" data-cat="centro_acopio" data-allowed="offer">
             <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#0ea5e9" stroke="#0c4a6e" stroke-width="1"><path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/></svg></span>
             Centro de acopio <small>(nombre, dirección y teléfono obligatorios)</small>
+          </button>
+          <button class="cat-btn" data-cat="albergue" data-allowed="offer">
+            <span class="cat-ico"><svg viewBox="0 0 24 24" fill="#0d9488" stroke="#134e4a" stroke-width="1"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22" stroke="#134e4a" stroke-width="1" fill="none"/></svg></span>
+            Albergue / Refugio <small>(nombre, dirección y teléfono obligatorios)</small>
           </button>
         </div>
       </div>
@@ -1309,7 +1325,9 @@
       movilidad:     { emoji: "🚗",  label: "Movilidad / Transporte",        svg: SVG_ICONS.movilidad,   allowedTypes: ["offer","request"] },
       peligro:       { emoji: "🚫",  label: "Peligro / Rescate",             svg: SVG_ICONS.peligro,     allowedTypes: ["request"] },         // alerta — no se "ofrece"
       centro_acopio: { emoji: "📦",  label: "Centro de acopio",              svg: SVG_ICONS.centro,      allowedTypes: ["offer"],
-                       requiresExtra: true },                                                                                                  // solo ofrece + campos obligatorios
+                       requiresExtra: true },
+      albergue:      { emoji: "🏠",  label: "Albergue / Refugio",            svg: SVG_ICONS.albergue,    allowedTypes: ["offer"],
+                       requiresExtra: true },
     };
 
     // ============================================================
@@ -1687,9 +1705,9 @@
       }
       if (!markers.length) { el.innerHTML = ""; return; }
       const parts = [];
-      if (centros)    parts.push(`<span>${STAT_SVGS.centros} ${centros} centros</span>`);
-      if (hospitales) parts.push(`<span>${STAT_SVGS.hospitales} ${hospitales} hospitales</span>`);
-      if (albergues)  parts.push(`<span>${STAT_SVGS.albergues} ${albergues} albergues</span>`);
+      if (centros)    parts.push(`<span class="stat-2nd">${STAT_SVGS.centros} ${centros} centros</span>`);
+      if (hospitales) parts.push(`<span class="stat-2nd">${STAT_SVGS.hospitales} ${hospitales} hospitales</span>`);
+      if (albergues)  parts.push(`<span class="stat-2nd">${STAT_SVGS.albergues} ${albergues} albergues</span>`);
       if (ofrecen)    parts.push(`<span>${STAT_SVGS.ofrecen} ${ofrecen} ofrecen</span>`);
       if (solicitan)  parts.push(`<span>${STAT_SVGS.solicitan} ${solicitan} solicitan</span>`);
       el.innerHTML = parts.join("");
@@ -1800,10 +1818,13 @@
         const title = $("mStep3Title");
         if (title) title.textContent = `${typeLabel}: ${catLabel}`;
         const centroFields = $("centroFields");
-        if (centroFields) centroFields.style.display = selectedCategory === "centro_acopio" ? "flex" : "none";
+        const needsExtra = selectedCategory === "centro_acopio" || selectedCategory === "albergue";
+        if (centroFields) centroFields.style.display = needsExtra ? "flex" : "none";
         const noteEl = $("noteInput");
         if (noteEl) noteEl.placeholder = selectedCategory === "centro_acopio"
           ? "¿Qué aceptan o qué tienen disponible? (ej: agua, ropa, alimentos, medicinas)"
+          : selectedCategory === "albergue"
+          ? "¿Qué aceptan? ¿Mascotas? ¿Capacidad? (ej: familias con niños, hasta 50 personas)"
           : "Nota opcional (horario, detalles…)";
         if (pendingMarker && pendingLatLng) {
           pendingMarker.setIcon(makeIcon(selectedCategory, selectedType, true));
@@ -1832,7 +1853,7 @@
       for (let i = markers.length - 1; i >= 0; i--) {
         const m = markers[i];
         // centroSource="apv" = centro APV (preservar). Sin centroSource = reporte usuario (limpiar)
-        if ((!m.isCentro || !m.centroSource) && !m.isHospital && !m.isExternal) {
+        if ((!m.isCentro || !m.centroSource) && !m.isHospital && !m.isExternal && !m.isAlbergue) {
           try { map.removeLayer(m.layer); m.cg?.removeLayer(m.layer); } catch {}
           markers.splice(i, 1);
         }
@@ -1983,8 +2004,8 @@
         }
         const phone = prefix + digits;
 
-        // 2) Campos obligatorios de centro de acopio
-        if (selectedCategory === "centro_acopio") {
+        // 2) Campos obligatorios de centro de acopio / albergue
+        if (selectedCategory === "centro_acopio" || selectedCategory === "albergue") {
           const name = ($("reporterNameInput")?.value || "").trim();
           const addr = ($("exactAddressInput")?.value || "").trim();
           if (name.length < 2) {
@@ -1992,7 +2013,7 @@
             $("reporterNameInput")?.focus(); return;
           }
           if (addr.length < 5) {
-            showStatus("Ingresa la dirección exacta del centro (mínimo 5 caracteres).", "err", 3500);
+            showStatus("Ingresa la dirección exacta (mínimo 5 caracteres).", "err", 3500);
             $("exactAddressInput")?.focus(); return;
           }
         }
@@ -2066,7 +2087,7 @@
           source: "user",
           client_fp: CLIENT_FP,
           contact_phone: phone,
-          ...(category === "centro_acopio" ? {
+          ...((category === "centro_acopio" || category === "albergue") ? {
             reporter_name: ($("reporterNameInput")?.value || "").trim(),
             exact_address: ($("exactAddressInput")?.value || "").trim(),
           } : {}),
@@ -2256,14 +2277,8 @@
     function makeShelterIcon() {
       return L.divIcon({
         className: '',
-        html: `<svg viewBox="0 0 32 42" width="28" height="36" xmlns="http://www.w3.org/2000/svg">
-          <path d="M16 2C9.37 2 4 7.37 4 14c0 10 12 26 12 26S28 24 28 14C28 7.37 22.63 2 16 2z" fill="#0d9488" stroke="#134e4a" stroke-width="1.5"/>
-          <path d="M8 21l8-7 8 7v8H8v-8z" fill="#fff" opacity="0.93"/>
-          <path d="M13 29v-5h6v5" fill="none" stroke="#0d9488" stroke-width="1.2"/>
-        </svg>`,
-        iconSize: [28, 36],
-        iconAnchor: [14, 36],
-        popupAnchor: [0, -36],
+        html: `<div class="pin-badge albergue">${SVG_ICONS.albergue}</div>`,
+        iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -18],
       });
     }
 
