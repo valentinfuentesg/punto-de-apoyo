@@ -972,7 +972,7 @@
             <li>Sin cuentas, sin email, sin nombre requerido.</li>
             <li>La geolocalización nunca se envía a ningún servidor.</li>
             <li>Solo guardamos: lat/lng tocada, categoría, tipo y nota opcional.</li>
-            <li>Las solicitudes se borran a las <strong>24 h</strong>, los ofrecimientos a las <strong>72 h</strong>.</li>
+            <li>Las solicitudes se borran a las <strong>48 h</strong>, los ofrecimientos a las <strong>72 h</strong>.</li>
           </ul>
         </section>
 
@@ -1825,7 +1825,7 @@
 
       const isHistorial = reportWindowHours > 72;
       const since = new Date(Date.now() - reportWindowHours * 60 * 60 * 1000).toISOString();
-      const cutoff24h = Date.now() - 24 * 60 * 60 * 1000;
+      const cutoff48h = Date.now() - 48 * 60 * 60 * 1000;
 
       let raw, error;
       if (isHistorial) {
@@ -1853,7 +1853,7 @@
           ? true
           : r.report_type === "offer"
             ? true
-            : new Date(r.created_at).getTime() > cutoff24h
+            : new Date(r.created_at).getTime() > cutoff48h
       );
       data.forEach(r => addReportToMap(r, isHistorial && r.is_active === false));
       showStatus(`${data.length} reporte(s) activos · últimas 48h`, "ok");
@@ -2910,7 +2910,7 @@
         // Expiración: requests 24h, offers 72h (igual que reportes propios)
         if (p.created_at) {
           const ageMs = Date.now() - new Date(p.created_at).getTime();
-          const limitMs = (type === "request" ? 24 : 72) * 3600 * 1000;
+          const limitMs = (type === "request" ? 48 : 72) * 3600 * 1000;
           if (ageMs > limitMs) { skipped++; continue; }
         }
 
