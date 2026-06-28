@@ -3109,16 +3109,18 @@
     // Coordenadas conocidas de hospitales venezolanos (defensa contra Nominatim caído / rate-limit).
     // Match por substring case-insensitive del nombre del sheet.
     const HOSPITAL_COORDS = [
-      { match: /universitario.*caracas|huc|clin[ií]cas.*caracas/i, name: "Hospital Universitario de Caracas (HUC)", lat: 10.4923, lng: -66.8908, bloodDonors: true },
+      // Coordenadas verificadas con OpenStreetMap (Nominatim) — última revisión 2026-06-27
+      { match: /universitario.*caracas|huc|clin[ií]cas.*caracas/i, name: "Hospital Universitario de Caracas (HUC)", lat: 10.4905, lng: -66.8938, bloodDonors: true },
       // Vargas LA GUAIRA va PRIMERO para que el regex de Caracas no se lo coma
-      { match: /vargas.*la guaira|guaira.*vargas/i,                 name: "Hospital José María Vargas (La Guaira)",  lat: 10.6033, lng: -66.9419 },
-      { match: /vargas.*caracas|jos[eé] mar[ií]a vargas(?!.*guaira)/i, name: "Hospital Vargas de Caracas",           lat: 10.5023, lng: -66.9136, bloodDonors: true },
+      { match: /vargas.*la guaira|guaira.*vargas/i,                 name: "Hospital José María Vargas (La Guaira)",  lat: 10.6035, lng: -66.9223 },
+      // Hospital Vargas de Caracas — Av. San Martín, Cotiza (NO El Silencio)
+      { match: /vargas.*caracas|jos[eé] mar[ií]a vargas(?!.*guaira)/i, name: "Hospital Vargas de Caracas",          lat: 10.5162, lng: -66.9114, bloodDonors: true },
       { match: /seguro social.*guaira|guaira.*seguro social/i,      name: "Hospital del Seguro Social (La Guaira)",  lat: 10.5983, lng: -66.9281 },
       { match: /domingo luciani|el llanito/i,                       name: "Hospital Domingo Luciani (El Llanito)",   lat: 10.4836, lng: -66.8067, bloodDonors: true },
       // Ana Francisca Pérez de León = nombre completo del Pérez de León (Petare)
       { match: /p[eé]rez de le[oó]n|p[eé]rez le[oó]n|ana francisca|petare/i, name: "Hospital Ana Francisca Pérez de León (Petare)", lat: 10.4951, lng: -66.7889 },
       { match: /miguel p[eé]rez carre[nñ]o|caricuao|p[eé]rez carre[nñ]o/i, name: "Hospital Miguel Pérez Carreño",     lat: 10.4598, lng: -66.9716, bloodDonors: true },
-      { match: /magallanes de catia/i,                              name: "Hospital de Catia (Magallanes)",          lat: 10.5142, lng: -66.9489 },
+      { match: /magallanes de catia/i,                              name: "Hospital Magallanes de Catia",            lat: 10.5162, lng: -66.9548 },
       // Periférico de Catia tiene OTRO nombre: "Dr. Ricardo Baquero González". Cubrimos typo "Hopital".
       { match: /perif[eé]rico.*catia|catia.*perif[eé]rico|baquero gonz[aá]lez|h[oó]pital.*baquero/i, name: "Hospital Periférico de Catia (Dr. Ricardo Baquero González)", lat: 10.5197, lng: -66.9460 },
       { match: /jos[eé] gregorio hern[aá]ndez|^jgh\b/i,             name: "Hospital Dr. José Gregorio Hernández (Catia)", lat: 10.5135, lng: -66.9445 },
@@ -3126,7 +3128,7 @@
       { match: /cruz roja/i,                                        name: "Cruz Roja Venezolana (Maripérez, Caracas)", lat: 10.5060, lng: -66.9055 },
       { match: /pariata|rafael medina jim[eé]nez/i,                 name: "Hospital de Pariata (La Guaira)",         lat: 10.6033, lng: -66.9469 },
       { match: /cl[ií]nica el [aá]vila/i,                           name: "Clínica El Ávila (Altamira, Caracas)",    lat: 10.4945, lng: -66.8505 },
-      { match: /maternidad concepci[oó]n palacios/i,                name: "Maternidad Concepción Palacios",          lat: 10.5083, lng: -66.9264 },
+      { match: /maternidad concepci[oó]n palacios/i,                name: "Maternidad Concepción Palacios",          lat: 10.4953, lng: -66.9316 },
       { match: /perif[eé]rico.*coche/i,                             name: "Hospital Periférico de Coche",            lat: 10.4607, lng: -66.9220 },
       { match: /j[\.\s]?m[\.\s]?de los r[ií]os|de los rios|nino jesus/i, name: "Hospital JM de los Ríos (pediátrico)", lat: 10.5018, lng: -66.8881 },
       { match: /centro m[eé]dico de caracas/i,                      name: "Centro Médico de Caracas",                lat: 10.4953, lng: -66.8754 },
@@ -3135,8 +3137,8 @@
       { match: /universitario.*m[eé]rida|hula/i,                    name: "Hospital Universitario de Mérida",        lat: 8.5947, lng: -71.1428 },
       { match: /universitario.*ant[oó]nio mar[ií]a pineda|barquisimeto/i, name: "Hospital Universitario Antonio María Pineda (Barquisimeto)", lat: 10.0686, lng: -69.3211 },
       { match: /universitario.*ruiz y p[aá]ez|ciudad bol[ií]var/i,  name: "Hospital Universitario Ruiz y Páez (Ciudad Bolívar)", lat: 8.1370, lng: -63.5407 },
-      { match: /carlos arvelo|militar/i,                            name: "Hospital Militar Carlos Arvelo",          lat: 10.4954, lng: -66.9243 },
-      { match: /razetti|raz?eti/i,                                  name: "Hospital Oncológico Padre Machado / Razetti", lat: 10.4849, lng: -66.8973 },
+      { match: /carlos arvelo|militar/i,                            name: "Hospital Militar Carlos Arvelo",          lat: 10.4981, lng: -66.9392 },
+      { match: /razetti|raz?eti|padre machado/i,                    name: "Hospital Oncológico Padre Machado / Razetti", lat: 10.4777, lng: -66.9180 },
       { match: /central.*valencia|enrique tejera/i,                 name: "Hospital Central de Valencia (Dr. Enrique Tejera)", lat: 10.1736, lng: -68.0029 },
       { match: /central.*maracay|jos[eé] mar[ií]a benitez/i,        name: "Hospital Central de Maracay",             lat: 10.2495, lng: -67.5957 },
       { match: /universitario.*p[uú]erto la cruz|amana del tamarindo/i, name: "Hospital Dr. Luis Razetti (Puerto La Cruz)", lat: 10.2173, lng: -64.6896 },
