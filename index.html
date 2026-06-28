@@ -69,7 +69,7 @@
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
     img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org;
     font-src 'self' data:;
-    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com https://ayudaparavenezuela.com https://caracasayuda.com https://www.reconectavenezuela.com;
+    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com https://localizadosvenezuela.com https://ayudaparavenezuela.com https://caracasayuda.com;
     manifest-src 'self';
     upgrade-insecure-requests;
   " />
@@ -2311,60 +2311,6 @@
       }
     }
 
-    // ============================================================
-    // RECONECTA VENEZUELA — puntos de señal / WiFi
-    // reconectavenezuela.com no expone CORS desde fuera del browser;
-    // intentamos varios endpoints candidatos y usamos el primero que responda.
-    // ============================================================
-    let reconectaLoaded = false;
-    async function loadReconectaSignal() {
-      if (reconectaLoaded) return;
-      reconectaLoaded = true;
-      const CANDIDATES = [
-        "https://www.reconectavenezuela.com/api/puntos",
-        "https://www.reconectavenezuela.com/api/v1/puntos",
-        "https://www.reconectavenezuela.com/api/points",
-        "https://www.reconectavenezuela.com/puntos.json",
-        "https://www.reconectavenezuela.com/data.json",
-      ];
-      let puntos = null;
-      for (const url of CANDIDATES) {
-        try {
-          const res = await fetch(url, { mode: "cors" });
-          if (!res.ok) continue;
-          const json = await res.json();
-          const arr = Array.isArray(json?.data) ? json.data
-                    : Array.isArray(json?.puntos) ? json.puntos
-                    : Array.isArray(json) ? json : null;
-          if (arr?.length) { puntos = arr; console.info("[reconecta] endpoint:", url, "→", arr.length, "puntos"); break; }
-        } catch { continue; }
-      }
-      if (!puntos) { console.info("[reconecta] sin CORS en ningún endpoint candidato"); return; }
-
-      const cg = getOrCreateCluster("senal");
-      let added = 0;
-      for (const p of puntos) {
-        const lat = Number(p.lat ?? p.latitude  ?? p.latitud  ?? p.y);
-        const lng = Number(p.lng ?? p.longitude ?? p.longitud ?? p.lon ?? p.x);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-        const nombre   = escapeHtml(p.nombre   || p.name     || p.titulo || "Punto WiFi");
-        const direccion = escapeHtml(p.direccion || p.address || p.addr   || "");
-        const ciudad   = escapeHtml(p.ciudad   || p.city     || "");
-        const waText   = `Punto WiFi/Señal: ${p.nombre || "Reconecta Venezuela"}\n${direccion}\nUbicación: ${gmapsUrl(lat, lng)}\n\nMás info: ${SITE_URL}`;
-        const layer = L.marker([lat, lng], { icon: makeIcon("senal", "offer") });
-        layer.bindPopup(
-          `<span class="popup-badge" style="background:#1e3a5f;color:#93c5fd;display:inline-flex;align-items:center;gap:4px;">${SVG_ICONS.senal.replace('width="20" height="20"','width="13" height="13"')} Señal / WiFi</span><br>` +
-          `<div class="popup-org" style="color:#93c5fd;">${nombre}</div>` +
-          (direccion ? `<div class="popup-addr">${direccion}${ciudad ? ` · ${ciudad}` : ""}</div>` : "") +
-          `<div>${gmapsLink(lat, lng)}${waShareButton(waText)}</div>`
-        );
-        const entry = { layer, isExternal: true, category: "senal", report_type: "offer", created_at: null, cg };
-        markers.push(entry);
-        if (matchesFilter(entry, activeFilter)) { cg.addLayer(layer); added++; }
-      }
-      if (added) showStatus(`${added} puntos WiFi de Reconecta Venezuela`, "ok", 2500);
-      updateHeroStats();
-    }
 
     // ============================================================
     // CSV parser mínimo (maneja comillas y comas dentro de campos)
@@ -2538,8 +2484,6 @@
     else setTimeout(loadAPVCentros, 50);
     if (window.requestIdleCallback) requestIdleCallback(loadRGAlbergues, { timeout: 600 });
     else setTimeout(loadRGAlbergues, 120);
-    if (window.requestIdleCallback) requestIdleCallback(loadReconectaSignal, { timeout: 800 });
-    else setTimeout(loadReconectaSignal, 200);
 
     // ============================================================
     // PANEL "BUSCAR PERSONA" (Recursos)
