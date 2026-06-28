@@ -3365,15 +3365,18 @@
         const txt = await res.text();
         const rows = parseCSV(txt);
 
-        // Detectar layout — soporta dos formatos:
-        //  (A) Sheet con header limpio: alguna celda == "HOSPITAL" → data empieza en la siguiente fila
-        //  (B) Sheet sin header limpio (banner multi-línea como una sola celda):
-        //      la primera fila cuya col 0 empiece con "HOSPITAL " o "Clínica" es ya data
+        // Detectar layout — varios formatos posibles:
+        //  (A) Header limpio: celda exactamente "HOSPITAL" → datos desde fila siguiente
+        //  (B) Sin header: primera fila cuya col 0 empiece con "HOSPITAL " o "Clínica"
+        //  (C) Header con texto extra: fila que contiene celda con "hospital" + otra celda con
+        //      keyword típico de header (cedula/nombre/estado) — robusto ante cambios de formato
         let hospCol = -1, dataStart = -1;
+        // (A) Exact match
         for (let i = 0; i < Math.min(rows.length, 20); i++) {
           const idx = rows[i].findIndex(c => /^\s*hospital\s*$/i.test(c || ""));
           if (idx >= 0) { hospCol = idx; dataStart = i + 1; break; }
         }
+        // (B) First column starts with hospital/clínica name → headerless data
         if (hospCol < 0) {
           for (let i = 0; i < Math.min(rows.length, 20); i++) {
             const c = (rows[i][0] || "").trim();
@@ -3382,7 +3385,19 @@
             }
           }
         }
-        if (hospCol < 0) throw new Error("No se encontró la columna HOSPITAL");
+        // (C) Row with a short "hospital*" cell AND another header keyword → header row
+        if (hospCol < 0) {
+          for (let i = 0; i < Math.min(rows.length, 20); i++) {
+            const hasOther = rows[i].some(c => /c[eé]dula|apellido|nombre|estado|sexo|edad/i.test(c || ""));
+            const hIdx = rows[i].findIndex(c => /hospital/i.test(c || "") && (c || "").trim().length < 30);
+            if (hIdx >= 0 && hasOther) { hospCol = hIdx; dataStart = i + 1; break; }
+          }
+        }
+        if (hospCol < 0) {
+          // Desbloquear el panel aunque no haya datos
+          patientsLoaded = true;
+          throw new Error("No se encontró la columna HOSPITAL");
+        }
 
         // Detectar columnas por nombre en el header (Mode A: dataStart > 0)
         const headerRow = dataStart > 0 ? rows[dataStart - 1] : null;
