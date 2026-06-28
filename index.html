@@ -3365,37 +3365,41 @@
         const txt = await res.text();
         const rows = parseCSV(txt);
 
-        // Detectar layout — varios formatos posibles:
-        //  (A) Header limpio: celda exactamente "HOSPITAL" → datos desde fila siguiente
-        //  (B) Sin header: primera fila cuya col 0 empiece con "HOSPITAL " o "Clínica"
-        //  (C) Header con texto extra: fila que contiene celda con "hospital" + otra celda con
-        //      keyword típico de header (cedula/nombre/estado) — robusto ante cambios de formato
+        // Detectar columna HOSPITAL y fila de inicio de datos.
+        // Estrategia data-driven: no depende del texto del header sino de los VALORES.
+        const hospDataPattern = /^(hospital|cl[ií]nica|centro\s*m[eé]dico|maternidad|ambulatorio)/i;
+        const hdrKeyword      = /^(hospital|red social|c[eé]dula|apellido|nombre|estado|fuente|rrss|edad|sexo|servicio|diagn[oó]stico)$/i;
+
         let hospCol = -1, dataStart = -1;
-        // (A) Exact match
-        for (let i = 0; i < Math.min(rows.length, 20); i++) {
+
+        // (A) Header exacto "HOSPITAL" en alguna celda → datos en fila siguiente
+        for (let i = 0; i < Math.min(rows.length, 6); i++) {
           const idx = rows[i].findIndex(c => /^\s*hospital\s*$/i.test(c || ""));
           if (idx >= 0) { hospCol = idx; dataStart = i + 1; break; }
         }
-        // (B) First column starts with hospital/clínica name → headerless data
+
+        // (B) Data-driven: escanear columnas y ver cuál tiene más celdas con nombre de hospital
         if (hospCol < 0) {
-          for (let i = 0; i < Math.min(rows.length, 20); i++) {
-            const c = (rows[i][0] || "").trim();
-            if (/^hospital[\s\.,]/i.test(c) || /^cl[ií]nica\s/i.test(c)) {
-              hospCol = 0; dataStart = i; break;
+          const scanEnd = Math.min(rows.length, 20);
+          const numCols = Math.max(...rows.slice(0, scanEnd).map(r => r.length), 0);
+          let bestCol = -1, bestCount = 0;
+          for (let col = 0; col < numCols; col++) {
+            let count = 0;
+            for (let i = 0; i < scanEnd; i++) {
+              if (hospDataPattern.test((rows[i][col] || "").trim())) count++;
             }
+            if (count > bestCount) { bestCount = count; bestCol = col; }
+          }
+          if (bestCount >= 2) {
+            hospCol = bestCol;
+            // Primera fila donde ese col tiene dato de hospital = inicio de datos
+            dataStart = rows.findIndex(r => hospDataPattern.test((r[hospCol] || "").trim()));
+            if (dataStart < 0) dataStart = 0;
           }
         }
-        // (C) Row with a short "hospital*" cell AND another header keyword → header row
+
         if (hospCol < 0) {
-          for (let i = 0; i < Math.min(rows.length, 20); i++) {
-            const hasOther = rows[i].some(c => /c[eé]dula|apellido|nombre|estado|sexo|edad/i.test(c || ""));
-            const hIdx = rows[i].findIndex(c => /hospital/i.test(c || "") && (c || "").trim().length < 30);
-            if (hIdx >= 0 && hasOther) { hospCol = hIdx; dataStart = i + 1; break; }
-          }
-        }
-        if (hospCol < 0) {
-          // Desbloquear el panel aunque no haya datos
-          patientsLoaded = true;
+          patientsLoaded = true; // desbloquea el panel
           throw new Error("No se encontró la columna HOSPITAL");
         }
 
