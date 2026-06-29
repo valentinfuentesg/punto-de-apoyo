@@ -2392,7 +2392,11 @@
     function renderCentros(list) {
       if (!Array.isArray(list) || !list.length) return 0;
       const cg = getOrCreateCluster("centro");
-      const painted = []; // coordenadas ya pintadas en esta llamada, para dedup interno de APV
+      // Dedup cross-source: incluye centros ya en el mapa de cualquier fuente
+      const painted = markers
+        .filter(m => m.isCentro && m.centroSource)
+        .map(m => { const ll = m.layer?.getLatLng?.(); return ll ? { lat: ll.lat, lng: ll.lng } : null; })
+        .filter(Boolean);
       let added = 0, skipped = 0;
       for (const c of list) {
         if (!Number.isFinite(c.lat) || !Number.isFinite(c.lng)) continue;
