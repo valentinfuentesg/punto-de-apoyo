@@ -2404,7 +2404,7 @@
         if (dup) { skipped++; continue; }
         painted.push({ lat: c.lat, lng: c.lng });
         const layer = buildCentroLayer(c);
-        const entry = { layer, isCentro: true, centroSource: "apv", category: "centro", report_type: null, created_at: null,
+        const entry = { layer, isCentro: true, centroSource: c.source || "apv", category: "centro", report_type: null, created_at: null,
                         centroName: (c.org || c.addr || ""), cg };
         markers.push(entry);
         if (matchesFilter(entry, activeFilter)) { cg.addLayer(layer); added++; }
@@ -2530,10 +2530,29 @@
         showStatus("Centros de acopio no disponibles", "err", 3000);
       }
     }
+    async function loadAHVCentros() {
+      if (!sb) return;
+      try {
+        const { data, error } = await sb
+          .from("centros")
+          .select("id, org, addr, lat, lng, ciudad, acepta, contacto, external_key")
+          .eq("source", "ahv")
+          .eq("tipo", "centro_acopio");
+        if (error) { console.warn("AHV centros:", error.message); return; }
+        if (!data?.length) return;
+        const list = data.map(c => ({ ...c, source: "ahv" }));
+        clearCentrosBySource("ahv");
+        const n = renderCentros(list);
+        if (n) updateHeroStats();
+      } catch (e) { console.warn("AHV centros:", e.message); }
+    }
+
     if (window.requestIdleCallback) requestIdleCallback(loadAPVCentros, { timeout: 500 });
     else setTimeout(loadAPVCentros, 50);
     if (window.requestIdleCallback) requestIdleCallback(loadRGAlbergues, { timeout: 600 });
     else setTimeout(loadRGAlbergues, 120);
+    if (window.requestIdleCallback) requestIdleCallback(loadAHVCentros, { timeout: 700 });
+    else setTimeout(loadAHVCentros, 150);
     if (window.requestIdleCallback) requestIdleCallback(loadReconectaSignal, { timeout: 800 });
     else setTimeout(loadReconectaSignal, 200);
 
