@@ -69,7 +69,7 @@
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
     img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org;
     font-src 'self' data:;
-    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com https://localizadosvenezuela.com https://ayudaparavenezuela.com https://caracasayuda.com;
+    connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com https://localizadosvenezuela.com https://caracasayuda.com;
     manifest-src 'self';
     upgrade-insecure-requests;
   " />
@@ -2425,115 +2425,9 @@
       }
     }
 
-    // Limpiar cachés obsoletas de fuentes anteriores (Sheets)
-    try { localStorage.removeItem("pa_centros_v1"); } catch {}
+    // Limpiar cachés obsoletas
+    try { localStorage.removeItem("pa_centros_v1"); localStorage.removeItem("apv_centros_v1"); } catch {}
 
-    // ============================================================
-    // AYUDA PARA VENEZUELA — sync de centros desde CSV público
-    // https://ayudaparavenezuela.com/api/public/centers/csv
-    // ============================================================
-    const APV_URL   = "https://ayudaparavenezuela.com/api/public/centers/csv";
-    const APV_CACHE = "apv_centros_v1";
-    const APV_TTL   = 30 * 60 * 1000; // 30 min
-
-    function splitCSVLine(line) {
-      const out = []; let cur = "", inQ = false;
-      for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
-        else if (ch === ',' && !inQ) { out.push(cur); cur = ""; }
-        else cur += ch;
-      }
-      out.push(cur);
-      return out;
-    }
-
-    function parseAPVCsv(text) {
-      const lines = text.trim().split("\n");
-      if (lines.length < 2) return [];
-      const header = splitCSVLine(lines[0]);
-      const idx = k => header.indexOf(k);
-      const iName = idx("name"), iOrg = idx("organization"), iCity = idx("city"),
-            iAddr = idx("address"), iLat = idx("latitude"), iLng = idx("longitude"),
-            iPhone = idx("phone"), iSched = idx("schedule"), iSupply = idx("supply_types"),
-            iActive = idx("is_active"), iId = idx("id");
-      const results = [];
-      for (let i = 1; i < lines.length; i++) {
-        const cols = splitCSVLine(lines[i]);
-        if (cols[iActive]?.toLowerCase() !== "true") continue;
-        const lat = parseFloat(cols[iLat]), lng = parseFloat(cols[iLng]);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-        if (lat < -1 || lat > 17 || lng < -75 || lng > -58) continue;
-        const supplyRaw = (cols[iSupply] || "").replace(/\|/g, ", ").trim();
-        const supply = /^pendiente$/i.test(supplyRaw) ? "" : supplyRaw;
-        const contacto = [cols[iPhone], cols[iSched]].filter(v => v && v !== "N/A").join(" · ");
-        results.push({
-          org:          cols[iOrg] || cols[iName] || "AyudaParaVenezuela",
-          addr:         cols[iAddr] || "",
-          lat, lng,
-          ciudad:       cols[iCity] || "",
-          acepta:       supply || null,
-          contacto:     contacto || null,
-          external_key: cols[iId] || null,
-        });
-      }
-      return results;
-    }
-
-    async function upsertAPVCentrosToSupabase(list) {
-      if (!sb || !list.length) return;
-      const rows = list.map(c => ({
-        org: c.org, addr: c.addr, lat: c.lat, lng: c.lng,
-        ciudad: c.ciudad, acepta: c.acepta, contacto: c.contacto,
-        source: "apv", external_key: c.external_key,
-      }));
-      for (let i = 0; i < rows.length; i += 50) {
-        const { error } = await sb.from("centros").upsert(rows.slice(i, i+50), { onConflict: "source,external_key" });
-        if (error) { console.warn("APV centros→Supabase:", error.message); return; }
-        await new Promise(r => setTimeout(r, 150));
-      }
-      console.info(`APV centros→Supabase: ${rows.length} centros sincronizados`);
-    }
-
-    async function loadAPVCentros() {
-      let cached = null;
-      try {
-        const raw = localStorage.getItem(APV_CACHE);
-        if (raw) { const o = JSON.parse(raw); if (Date.now() - o.t < APV_TTL) cached = o.data; }
-      } catch {}
-
-      if (cached?.length) {
-        clearCentrosBySource("apv");
-        const painted = renderCentros(cached);
-        showStatus(`${painted} centros · actualizando…`, "ok", 1500);
-        // Refresh en background
-        fetch(APV_URL).then(r => r.text()).then(txt => {
-          const fresh = parseAPVCsv(txt);
-          if (!fresh.length) return;
-          try { localStorage.setItem(APV_CACHE, JSON.stringify({ t: Date.now(), data: fresh })); } catch {}
-          clearCentrosBySource("apv");
-          const n = renderCentros(fresh);
-          showStatus(`${n} centros de acopio`, "ok", 2000);
-          upsertAPVCentrosToSupabase(fresh);
-        }).catch(() => {});
-        return;
-      }
-
-      try {
-        const res = await fetch(APV_URL);
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const fresh = parseAPVCsv(await res.text());
-        if (!fresh.length) { console.warn("APV: CSV vacío o sin datos válidos"); return; }
-        try { localStorage.setItem(APV_CACHE, JSON.stringify({ t: Date.now(), data: fresh })); } catch {}
-        clearCentrosBySource("apv");
-        const n = renderCentros(fresh);
-        showStatus(`${n} centros de acopio`, "ok", 2000);
-        upsertAPVCentrosToSupabase(fresh).catch(() => {});
-      } catch (e) {
-        console.warn("APV centros: no disponible —", e.message);
-        showStatus("Centros de acopio no disponibles", "err", 3000);
-      }
-    }
     async function loadAHVCentros() {
       if (!sb) return;
       try {
@@ -2551,8 +2445,6 @@
       } catch (e) { console.warn("AHV centros:", e.message); }
     }
 
-    if (window.requestIdleCallback) requestIdleCallback(loadAPVCentros, { timeout: 500 });
-    else setTimeout(loadAPVCentros, 50);
     if (window.requestIdleCallback) requestIdleCallback(loadRGAlbergues, { timeout: 600 });
     else setTimeout(loadRGAlbergues, 120);
     if (window.requestIdleCallback) requestIdleCallback(loadAHVCentros, { timeout: 700 });
