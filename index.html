@@ -2891,14 +2891,31 @@
       medicamentos: "asistencia",
       comida:       "suministros",
       alimentos:    "suministros",
+      agua:         "suministros",
       herramientas: "suministros",
       mascotas:     "suministros",
+      higiene:      "suministros",
+      refugio:      "suministros",     // necesidades de gente desplazada (carpas, cobijas) — no es oferta de albergue
       transporte:   "movilidad",
+      carga:        "energia",         // "carga" de CA = carga de batería/celular
       iluminacion:  "energia",
       voluntarios:  "asistencia",
       rescate:      "peligro",
       donaciones:   null,              // monetarias — fuera de scope
     };
+
+    // Señales de necesidad médica urgente que CA a veces etiqueta bajo otra categoría
+    // (p.ej. "comida" o "agua" cuando el texto describe diálisis, oxígeno, cáncer, etc.)
+    const CA_MEDICAL_RE = /di[aá]lisis|insulina|ox[ií]geno|inhalador|antibi[oó]tico|hospitaliz|cirug[ií]a|quimioterapia|marcapasos|respirador|neumon[ií]a|convulsi[oó]n|epilepsia|c[aá]ncer|estado vegetal/i;
+
+    function resolveCACategory(p) {
+      const base = CA_CAT_MAP[p.categoria];
+      if (base === "suministros") {
+        const text = [p.descripcion, p.necesitan, p.ofrecen].filter(Boolean).join(" ");
+        if (CA_MEDICAL_RE.test(text)) return "asistencia";
+      }
+      return base;
+    }
 
     async function fetchCaracasAyudaPoints() {
       // 1) caché
@@ -3069,8 +3086,8 @@
         if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) { skipped++; continue; }
         if (p.lat < -1 || p.lat > 17 || p.lng < -75 || p.lng > -58) { skipped++; continue; }
 
-        const mapped = CA_CAT_MAP[p.categoria];
-        // centros se omiten — fuente única es APV
+        const mapped = resolveCACategory(p);
+        // centros se omiten — fuente única es AHV
         if (mapped === undefined || mapped === null || mapped === "_centro") { skipped++; continue; }
 
         // Dedup contra todos los reportes ya en mapa (incluye CA-vs-CA y CA-vs-user)
@@ -3134,8 +3151,8 @@
       for (const p of points) {
         if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
         if (p.lat < -1 || p.lat > 17 || p.lng < -75 || p.lng > -58) continue;
-        const mapped = CA_CAT_MAP[p.categoria];
-        // centros de acopio no se sincronizan desde CA — fuente única es APV
+        const mapped = resolveCACategory(p);
+        // centros de acopio no se sincronizan desde CA — fuente única es AHV
         if (mapped === undefined || mapped === null || mapped === "_centro") continue;
         const category = mapped;
         const note = [p.descripcion, p.necesitan, p.ofrecen].filter(Boolean).join(" · ").slice(0, 280) || null;
