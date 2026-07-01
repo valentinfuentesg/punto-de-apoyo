@@ -2451,6 +2451,8 @@
     else setTimeout(loadAHVCentros, 150);
     if (window.requestIdleCallback) requestIdleCallback(loadReconectaSignal, { timeout: 800 });
     else setTimeout(loadReconectaSignal, 200);
+    if (window.requestIdleCallback) requestIdleCallback(loadSismoDamage, { timeout: 900 });
+    else setTimeout(loadSismoDamage, 250);
 
     // ============================================================
     // PANEL "BUSCAR PERSONA" (Recursos)
@@ -2918,6 +2920,69 @@
              </div>`)
       );
       return layer;
+    }
+
+    // ============================================================
+    // SISMOVENEZUELA.COM — reportes de daños de edificios (colapso/
+    // severo/parcial), scrapeados de X/YouTube/Instagram. Solo lectura,
+    // vía Edge Function proxy (su API no expone CORS).
+    // ============================================================
+    const DAMAGE_LABELS = { total: "Colapso total", severo: "Daño severo", parcial: "Daño parcial" };
+    const DAMAGE_COLORS = { total: "#dc2626", severo: "#f97316", parcial: "#eab308" };
+
+    function buildSismoDamageLayer(f) {
+      const [lng, lat] = f.geometry.coordinates;
+      const p = f.properties;
+      const label = DAMAGE_LABELS[p.damage_type] || "Daño reportado";
+      const color = DAMAGE_COLORS[p.damage_type] || "#eab308";
+      const place = escapeHtml(p.place || "");
+      const needs = escapeHtml(p.needs || "");
+      const foto  = p.photo_url ? `<div style="margin-top:6px;"><img src="${escapeHtml(p.photo_url)}" style="max-width:100%;border-radius:6px;" loading="lazy"></div>` : "";
+      const fuente = p.source ? `<div style="margin-top:6px;"><a href="${escapeHtml(p.source)}" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;font-size:11px;">Ver fuente</a></div>` : "";
+      const waText = `${label}: ${place || needs}\nUbicación: ${gmapsUrl(lat, lng)}\n\nMás info: ${SITE_URL}`;
+      const layer = L.marker([lat, lng], { icon: makeIcon("peligro", "request") }).bindPopup(
+        `<span class="popup-badge request" style="background:${color};color:#fff;">${label}</span><br>` +
+        (place ? `<div style="color:#fff;font-weight:600;margin-top:4px;">${place}</div>` : "") +
+        (needs ? `<div style="color:#cbd5e1;font-size:12px;margin-top:2px;">${needs}</div>` : "") +
+        foto + fuente +
+        `<div>${gmapsLink(lat, lng)}${waShareButton(waText)}</div>` +
+        `<div style="margin-top:6px;font-size:11px;color:#6b7280;">SismoVenezuela · scraping de redes sociales</div>`
+      );
+      return layer;
+    }
+
+    async function loadSismoDamage() {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/sismo-damage-proxy`);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const json = await res.json();
+        const feats = Array.isArray(json?.features) ? json.features : [];
+        if (!feats.length) return;
+        const cg = getOrCreateCluster("peligro");
+        let added = 0;
+        for (const f of feats) {
+          const coords = f.geometry?.coordinates;
+          if (!Array.isArray(coords) || coords.length < 2) continue;
+          const [lng, lat] = coords;
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+          if (lat < -1 || lat > 17 || lng < -75 || lng > -58) continue;
+          // Dedup contra reportes de peligro ya en el mapa (usuarios + otras fuentes)
+          const dup = markers.some(m => {
+            if (m.category !== "peligro" || !m.layer?.getLatLng) return false;
+            const ll = m.layer.getLatLng();
+            return isCloseTo(lat, lng, ll.lat, ll.lng, 80);
+          });
+          if (dup) continue;
+          const layer = buildSismoDamageLayer(f);
+          const entry = { layer, category: "peligro", report_type: "request", created_at: f.properties?.reported_at || null, source: "sismove", isExternal: true, cg };
+          markers.push(entry);
+          if (matchesFilter(entry, activeFilter)) { cg.addLayer(layer); added++; }
+        }
+        if (added) showStatus(`${added} reportes de daños · SismoVenezuela`, "ok", 3000);
+        updateHeroStats();
+      } catch (e) {
+        console.warn("[sismo-damage]", e.message);
+      }
     }
 
     // Dedup: aproximación por nombre normalizado para centros,
