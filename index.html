@@ -2857,7 +2857,7 @@
       try {
         const url = `${CARACAS_AYUDA.url}/rest/v1/puntos`
                   + `?select=id,nombre,categoria,tipo,estado,lat,lng,direccion,horario,telefono,descripcion,necesitan,ofrecen,created_at`
-                  + `&estado=eq.verified&limit=500`;
+                  + `&estado=eq.verified&order=created_at.desc&limit=1000`;
         const res = await fetch(url, {
           headers: {
             apikey: CARACAS_AYUDA.key,
