@@ -67,7 +67,7 @@
     form-action 'self';
     script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
-    img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org;
+    img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://*.supabase.co;
     font-src 'self' data:;
     connect-src 'self' https://cdn.jsdelivr.net https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://docs.google.com https://*.googleusercontent.com https://localizadosvenezuela.com https://caracasayuda.com;
     manifest-src 'self';
@@ -374,6 +374,7 @@
     .pin-badge.centro   { border-color: #0ea5e9; background: #e0f2fe; } /* azul = centro de acopio */
     .pin-badge.hospital  { border-color: #dc2626; background: #fee2e2; } /* rojo = hospital */
     .pin-badge.albergue  { border-color: #0d9488; background: #ccfbf1; } /* teal = albergue */
+    .pin-badge.danos     { border-color: #b91c1c; background: #7f1d1d; } /* rojo oscuro = edificio dañado */
     .pin-pending { animation: bounce 0.6s infinite alternate; }
     @keyframes bounce { to { transform: translateY(-4px); } }
 
@@ -892,6 +893,10 @@
       <svg viewBox="0 0 24 24" fill="#eab308" stroke="#713f12" stroke-width="1"><path d="M12 2L1 22h22L12 2z"/><rect x="11" y="9" width="2" height="6" fill="#713f12"/><circle cx="12" cy="18" r="1" fill="#713f12"/></svg>
       Peligro
     </div>
+    <div class="chip" data-filter="danos">
+      <svg viewBox="0 0 24 24" fill="#b91c1c" stroke="#450a0a" stroke-width="1"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M10 9l-2 3 3 2-2 4" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Daños
+    </div>
     <div class="chip" data-filter="movilidad">
       <svg viewBox="0 0 24 24" fill="#7c3aed" stroke="#4c1d95" stroke-width="1"><path d="M5 11l1.7-4.7a2 2 0 0 1 1.9-1.3h8.8a2 2 0 0 1 1.9 1.3L21 11v6a1 1 0 0 1-1 1h-1.5a2 2 0 1 1-4 0h-5a2 2 0 1 1-4 0H4a1 1 0 0 1-1-1v-6h2z"/></svg>
       Movilidad
@@ -1302,6 +1307,7 @@
       centro:      '<svg viewBox="0 0 24 24" width="20" height="20" fill="#0ea5e9" stroke="#0c4a6e" stroke-width="1"><path d="M12 21s-7.5-4.5-9.5-9.5C1 7 4 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3 0 6 3 4.5 7.5C19.5 16.5 12 21 12 21z"/></svg>',
       hospital:    '<svg viewBox="0 0 24 24" width="20" height="20" fill="#dc2626" stroke="#7f1d1d" stroke-width="1"><rect x="3" y="6" width="18" height="14" rx="1"/><path d="M11 9h2v3h3v2h-3v3h-2v-3H8v-2h3z" fill="#fff"/><path d="M9 6V3h6v3" stroke="#7f1d1d" stroke-width="1" fill="none"/></svg>',
       albergue:    '<svg viewBox="0 0 24 24" width="20" height="20" fill="#0d9488" stroke="#134e4a" stroke-width="1"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22" stroke="#134e4a" stroke-width="1" fill="none"/></svg>',
+      danos:       '<svg viewBox="0 0 24 24" width="20" height="20" fill="#b91c1c" stroke="#450a0a" stroke-width="1"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M10 9l-2 3 3 2-2 4" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     };
 
     const CATEGORIES = {
@@ -1315,6 +1321,7 @@
                        requiresExtra: true },
       albergue:      { emoji: "🏠",  label: "Albergue / Refugio",            svg: SVG_ICONS.albergue,    allowedTypes: ["offer"],
                        requiresExtra: true },
+      danos:         { emoji: "🏚️", label: "Edificios dañados",             svg: SVG_ICONS.danos,       allowedTypes: ["request"] }, // solo fuentes externas — no reportable por usuarios
     };
 
     // ============================================================
@@ -1447,6 +1454,7 @@
       centro:        '#0ea5e9',
       hospital:      '#dc2626',
       albergue:      '#0d9488',
+      danos:         '#b91c1c',
     };
     const clusterGroups = {};
 
@@ -1494,7 +1502,7 @@
 
     function makeIcon(category, type = "offer", pending = false) {
       const cat = CATEGORIES[category] || { svg: SVG_ICONS.suministros };
-      const cls = category === "peligro" ? "alert" : type;
+      const cls = category === "peligro" ? "alert" : category === "danos" ? "danos" : type;
       return L.divIcon({
         html: `<div class="pin-badge ${cls} ${pending ? "pin-pending" : ""}">${cat.svg}</div>`,
         className: "", iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -18],
@@ -2940,7 +2948,7 @@
       const foto  = p.photo_url ? `<div style="margin-top:6px;"><img src="${escapeHtml(p.photo_url)}" style="max-width:100%;border-radius:6px;" loading="lazy"></div>` : "";
       const fuente = p.source ? `<div style="margin-top:6px;"><a href="${escapeHtml(p.source)}" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;font-size:11px;">Ver fuente</a></div>` : "";
       const waText = `${label}: ${place || needs}\nUbicación: ${gmapsUrl(lat, lng)}\n\nMás info: ${SITE_URL}`;
-      const layer = L.marker([lat, lng], { icon: makeIcon("peligro", "request") }).bindPopup(
+      const layer = L.marker([lat, lng], { icon: makeIcon("danos", "request") }).bindPopup(
         `<span class="popup-badge request" style="background:${color};color:#fff;">${label}</span><br>` +
         (place ? `<div style="color:#fff;font-weight:600;margin-top:4px;">${place}</div>` : "") +
         (needs ? `<div style="color:#cbd5e1;font-size:12px;margin-top:2px;">${needs}</div>` : "") +
@@ -2958,7 +2966,10 @@
         const json = await res.json();
         const feats = Array.isArray(json?.features) ? json.features : [];
         if (!feats.length) return;
-        const cg = getOrCreateCluster("peligro");
+        const cg = getOrCreateCluster("danos");
+        const seenIds = new Set(
+          markers.filter(m => m.category === "danos" && m.damageId).map(m => m.damageId)
+        );
         let added = 0;
         for (const f of feats) {
           const coords = f.geometry?.coordinates;
@@ -2966,15 +2977,11 @@
           const [lng, lat] = coords;
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
           if (lat < -1 || lat > 17 || lng < -75 || lng > -58) continue;
-          // Dedup contra reportes de peligro ya en el mapa (usuarios + otras fuentes)
-          const dup = markers.some(m => {
-            if (m.category !== "peligro" || !m.layer?.getLatLng) return false;
-            const ll = m.layer.getLatLng();
-            return isCloseTo(lat, lng, ll.lat, ll.lng, 80);
-          });
-          if (dup) continue;
+          const id = f.properties?.id;
+          if (id && seenIds.has(id)) continue;
+          if (id) seenIds.add(id);
           const layer = buildSismoDamageLayer(f);
-          const entry = { layer, category: "peligro", report_type: "request", created_at: f.properties?.reported_at || null, source: "sismove", isExternal: true, cg };
+          const entry = { layer, category: "danos", report_type: "request", created_at: f.properties?.reported_at || null, source: "sismove", isExternal: true, damageId: id, cg };
           markers.push(entry);
           if (matchesFilter(entry, activeFilter)) { cg.addLayer(layer); added++; }
         }
