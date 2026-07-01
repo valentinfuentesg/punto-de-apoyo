@@ -3000,7 +3000,10 @@
         ? `<img src="${fotoUrl}" data-full="${fotoUrl}" class="popup-photo-thumb" loading="lazy" alt="Foto del daño reportado">`
           + `<div class="popup-photo-hint">Toca la foto para ampliar</div>`
         : "";
-      const fuente = p.source ? `<div style="margin-top:6px;"><a href="${escapeHtml(p.source)}" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;font-size:11px;">Ver fuente</a></div>` : "";
+      const isValidUrl = /^https?:\/\//i.test(p.source || "");
+      const fuente = !p.source ? "" : isValidUrl
+        ? `<div style="margin-top:6px;"><a href="${escapeHtml(p.source)}" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;font-size:11px;">Ver fuente</a></div>`
+        : `<div style="margin-top:6px;font-size:11px;color:#9ca3af;">Fuente: ${escapeHtml(p.source)}</div>`;
       const waText = `${label}: ${place || needs}\nUbicación: ${gmapsUrl(lat, lng)}\n\nMás info: ${SITE_URL}`;
       const layer = L.marker([lat, lng], { icon: makeIcon("danos", "request") }).bindPopup(
         `<span class="popup-badge request" style="background:${color};color:#fff;">${label}</span><br>` +
